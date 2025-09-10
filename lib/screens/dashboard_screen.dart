@@ -7,7 +7,10 @@ import '../widgets/modern_sidebar.dart';
 import '../widgets/modern_header.dart';
 import '../widgets/animated_widgets.dart';
 import '../widgets/tutorial_overlay_widget.dart';
+import '../widgets/notification_banner.dart';
+import '../widgets/notification_settings_widget.dart';
 import '../services/dashboard_service.dart';
+import '../services/notification_service.dart';
 import 'modern_calculo_precio_screen.dart';
 import 'modern_inventario_screen.dart';
 import 'modern_reportes_screen.dart';
@@ -38,7 +41,148 @@ class _DashboardScreenState extends State<DashboardScreen> {
     // Cargar datos del dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardService>().cargarDatos();
+      // Inicializar servicio de notificaciones
+      _initializeNotifications();
     });
+  }
+
+  Future<void> _initializeNotifications() async {
+    try {
+      await NotificationService().initialize();
+      // Verificar stock bajo y mostrar notificaciones
+      _checkStockAlerts();
+      // Programar recordatorios de tareas
+      _scheduleTaskReminders();
+    } catch (e) {
+      print('Error inicializando notificaciones: $e');
+    }
+  }
+
+  Future<void> _checkStockAlerts() async {
+    try {
+      final dashboardService = context.read<DashboardService>();
+      if (dashboardService.stockBajo > 0) {
+        await NotificationService().showStockLowAlert(
+          'Productos con stock bajo',
+          dashboardService.stockBajo,
+        );
+      }
+    } catch (e) {
+      print('Error verificando alertas de stock: $e');
+    }
+  }
+
+  Future<void> _scheduleTaskReminders() async {
+    try {
+      // Programar recordatorio diario para revisar inventario
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      final reminderTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 9, 0);
+      
+      await NotificationService().scheduleNotification(
+        id: 'daily_inventory_check',
+        title: '📋 Recordatorio Diario',
+        body: 'Es hora de revisar tu inventario y verificar el stock de productos',
+        scheduledTime: reminderTime,
+        type: NotificationType.taskReminder,
+        data: {
+          'action': 'check_inventory',
+          'recurring': true,
+        },
+      );
+
+      // Programar recordatorio semanal para análisis de ventas
+      final nextWeek = DateTime.now().add(const Duration(days: 7));
+      final weeklyReminderTime = DateTime(nextWeek.year, nextWeek.month, nextWeek.day, 10, 0);
+      
+      await NotificationService().scheduleNotification(
+        id: 'weekly_sales_analysis',
+        title: '📊 Análisis Semanal',
+        body: 'Revisa el análisis de ventas de la semana y planifica la próxima',
+        scheduledTime: weeklyReminderTime,
+        type: NotificationType.taskReminder,
+        data: {
+          'action': 'analyze_sales',
+          'recurring': true,
+        },
+      );
+    } catch (e) {
+      print('Error programando recordatorios: $e');
+    }
+  }
+
+  void _showNotifications() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            FaIcon(FontAwesomeIcons.bell, color: AppTheme.primaryColor),
+            SizedBox(width: 12),
+            Text('Notificaciones'),
+          ],
+        ),
+        content: SizedBox(
+          width: 400,
+          height: 500,
+          child: Column(
+            children: [
+              // Configuración de notificaciones
+              Expanded(
+                child: NotificationList(
+                  notifications: NotificationService().scheduledNotifications,
+                  onNotificationTap: (notification) {
+                    // Manejar tap en notificación
+                    Navigator.pop(context);
+                  },
+                  onNotificationDismiss: (notification) {
+                    NotificationService().cancelNotification(notification.id);
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Botón de configuración
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showNotificationSettings();
+                },
+                icon: const FaIcon(FontAwesomeIcons.gear, size: 16),
+                label: const Text('Configurar Notificaciones'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotificationSettings() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configuración de Notificaciones'),
+        content: const SizedBox(
+          width: 500,
+          child: NotificationSettingsWidget(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 
   final List<Map<String, dynamic>> _menuItems = [
@@ -125,6 +269,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onSearch: () {
                     // Implementar búsqueda
                   },
+                  actions: [
+                    // Botón de notificaciones
+                    IconButton(
+                      onPressed: _showNotifications,
+                      icon: const FaIcon(
+                        FontAwesomeIcons.bell,
+                        color: AppTheme.textPrimary,
+                      ),
+                      tooltip: 'Notificaciones',
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                 ),
                 Expanded(
                   child: _buildMainContent(),

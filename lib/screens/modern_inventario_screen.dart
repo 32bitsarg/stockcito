@@ -4,6 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/producto.dart';
 import '../services/database_service.dart';
 import '../services/dashboard_service.dart';
+import '../services/notification_service.dart';
 import '../config/app_theme.dart';
 import '../widgets/advanced_search_widget.dart';
 import '../widgets/animated_widgets.dart';
@@ -887,6 +888,15 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
                 
                 await _loadProductos();
                 context.read<DashboardService>().actualizarDatos();
+                
+                // Verificar si el stock sigue bajo después de la actualización
+                final nuevoStock = producto.stock + cantidad;
+                if (nuevoStock < 10) {
+                  await NotificationService().showStockLowAlert(
+                    producto.nombre,
+                    nuevoStock,
+                  );
+                }
                 
                 if (mounted) {
                   Navigator.of(context).pop();

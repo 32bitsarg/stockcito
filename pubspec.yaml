@@ -46,7 +46,7 @@ dependencies:
   font_awesome_flutter: ^10.7.0
   flutter_animate: ^4.5.0
   fl_chart: ^0.68.0
-  local_notifications: ^17.2.3
+  flutter_local_notifications: ^17.2.3
   win32: ^5.5.0
 
 dev_dependencies:

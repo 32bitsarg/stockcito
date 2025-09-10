@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../services/dashboard_service.dart';
 import '../services/error_handler_service.dart';
 import '../services/logging_service.dart';
+import '../services/notification_service.dart';
 import '../config/app_theme.dart';
 import '../widgets/windows_button.dart';
 
@@ -1069,6 +1070,12 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
       if (mounted) {
         context.read<DashboardService>().actualizarDatos();
       }
+
+      // Mostrar notificación de venta
+      await NotificationService().showSaleAlert(
+        venta.cliente,
+        venta.total,
+      );
 
       // Cerrar diálogo de carga
       ErrorHandlerService.hideLoadingDialog(context);
