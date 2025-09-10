@@ -1,0 +1,46 @@
+# Configuración de cobertura de código para Stockcito
+coverage:
+  # Directorios a incluir en la cobertura
+  include:
+    - lib/services/
+    - lib/widgets/
+    - lib/screens/
+    - lib/models/
+    - lib/config/
+  
+  # Directorios a excluir de la cobertura
+  exclude:
+    - lib/main.dart
+    - lib/generated/
+    - lib/l10n/
+    - test/
+  
+  # Archivos específicos a excluir
+  exclude_files:
+    - lib/services/optimization_summary.dart
+    - lib/widgets/window_manager_wrapper.dart
+  
+  # Configuración de reportes
+  reports:
+    - html
+    - lcov
+    - json
+  
+  # Umbrales de cobertura
+  thresholds:
+    line: 80
+    branch: 70
+    function: 80
+  
+  # Configuración de HTML
+  html:
+    output: coverage/html
+    title: 'Stockcito - Cobertura de Código'
+  
+  # Configuración de LCOV
+  lcov:
+    output: coverage/lcov.info
+  
+  # Configuración de JSON
+  json:
+    output: coverage/coverage.json
