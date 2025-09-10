@@ -282,7 +282,7 @@ class NotificationService {
         scheduledTime.millisecondsSinceEpoch ~/ 1000,
         title,
         body,
-        scheduledTime,
+        tz.TZDateTime.from(scheduledTime, tz.local),
         notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
