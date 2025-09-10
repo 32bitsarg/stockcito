@@ -334,19 +334,8 @@ Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para
 
 ## 👨‍💻 Autor
 
-**Tu Nombre**
-- GitHub: [@tu-usuario](https://github.com/tu-usuario)
-- Email: tu-email@ejemplo.com
-
----
-
-## 🙏 Agradecimientos
-
-- **Flutter Team** - Por el increíble framework
-- **Comunidad Dart** - Por el soporte y recursos
-- **Contribuidores** - Por las mejoras y sugerencias
-
----
+**32BitsArgen**
+- GitHub: [@32bitsarg](https://github.com/32bitsarg)
 
 <div align="center">
   <p>Hecho con ❤️ usando Flutter</p>
