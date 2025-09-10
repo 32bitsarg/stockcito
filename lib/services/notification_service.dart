@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:local_notifications/local_notifications.dart';
-import 'package:win32/win32.dart';
+import 'dart:convert';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'logging_service.dart';
 
@@ -61,7 +61,6 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  static const String _prefsKey = 'notification_settings';
   static const String _notificationsKey = 'scheduled_notifications';
 
   bool _isInitialized = false;
@@ -93,16 +92,21 @@ class NotificationService {
       }
 
       // Configurar notificaciones locales
-      await LocalNotifications.initialize(
-        const LocalNotificationsInitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-          iOS: DarwinInitializationSettings(
-            requestAlertPermission: false,
-            requestBadgePermission: false,
-            requestSoundPermission: false,
-          ),
-        ),
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
       );
+      
+      const initializationSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      
+      await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
       // Cargar configuración guardada
       await _loadSettings();
@@ -155,7 +159,7 @@ class NotificationService {
       
       _scheduledNotifications = notificationsJson
           .map((json) => NotificationData.fromMap(Map<String, dynamic>.from(
-              const JsonDecoder().convert(json))))
+              jsonDecode(json))))
           .toList();
     } catch (e) {
       LoggingService.error('Error cargando notificaciones programadas', error: e);
@@ -167,7 +171,7 @@ class NotificationService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final notificationsJson = _scheduledNotifications
-          .map((notification) => const JsonEncoder().convert(notification.toMap()))
+          .map((notification) => jsonEncode(notification.toMap()))
           .toList();
       
       await prefs.setStringList(_notificationsKey, notificationsJson);
@@ -189,24 +193,32 @@ class NotificationService {
       // Verificar si el tipo de notificación está habilitado
       if (!_isNotificationTypeEnabled(type)) return;
 
-      await LocalNotifications.show(
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      
+      const androidDetails = AndroidNotificationDetails(
+        'stockcito_channel',
+        'Stockcito Notifications',
+        channelDescription: 'Notificaciones de Stockcito',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+      
+      await flutterLocalNotificationsPlugin.show(
         DateTime.now().millisecondsSinceEpoch ~/ 1000,
         title,
         body,
-        const LocalNotificationDetails(
-          android: AndroidNotificationDetails(
-            'stockcito_channel',
-            'Stockcito Notifications',
-            channelDescription: 'Notificaciones de Stockcito',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
+        notificationDetails,
       );
 
       LoggingService.info('Notificación mostrada: $title');
@@ -245,24 +257,35 @@ class NotificationService {
       await _saveScheduledNotifications();
 
       // Programar la notificación
-      await LocalNotifications.schedule(
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      
+      const androidDetails = AndroidNotificationDetails(
+        'stockcito_scheduled',
+        'Stockcito Scheduled',
+        channelDescription: 'Notificaciones programadas de Stockcito',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+      
+      await flutterLocalNotificationsPlugin.zonedSchedule(
         scheduledTime.millisecondsSinceEpoch ~/ 1000,
         title,
         body,
-        const LocalNotificationDetails(
-          android: AndroidNotificationDetails(
-            'stockcito_scheduled',
-            'Stockcito Scheduled',
-            channelDescription: 'Notificaciones programadas de Stockcito',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
+        scheduledTime,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
 
       LoggingService.info('Notificación programada: $title para ${scheduledTime.toString()}');
@@ -277,7 +300,8 @@ class NotificationService {
       _scheduledNotifications.removeWhere((notification) => notification.id == id);
       await _saveScheduledNotifications();
       
-      await LocalNotifications.cancel(0); // Cancelar todas las notificaciones programadas
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      await flutterLocalNotificationsPlugin.cancel(0); // Cancelar todas las notificaciones programadas
       
       LoggingService.info('Notificación cancelada: $id');
     } catch (e) {
@@ -291,7 +315,8 @@ class NotificationService {
       _scheduledNotifications.clear();
       await _saveScheduledNotifications();
       
-      await LocalNotifications.cancel(0);
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      await flutterLocalNotificationsPlugin.cancel(0);
       
       LoggingService.info('Todas las notificaciones canceladas');
     } catch (e) {
