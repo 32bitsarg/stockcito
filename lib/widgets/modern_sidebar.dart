@@ -107,29 +107,23 @@ class ModernSidebar extends StatelessWidget {
                         duration: const Duration(milliseconds: 200),
                         height: 60,
                         decoration: BoxDecoration(
-                          color: isSelected 
-                              ? item['color'].withOpacity(0.15)
-                              : Colors.transparent,
+                          color: Colors.transparent,
                           borderRadius: BorderRadius.circular(16),
+                          // Indicador minimalista: línea vertical sutil
                           border: isSelected
-                              ? Border.all(
-                                  color: item['color'],
-                                  width: 2,
+                              ? Border(
+                                  left: BorderSide(
+                                    color: item['color'],
+                                    width: 3,
+                                  ),
                                 )
                               : null,
                         ),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
+                            Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? item['color'].withOpacity(0.2)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
                               child: Icon(
                                 item['icon'],
                                 color: isSelected 
@@ -144,7 +138,7 @@ class ModernSidebar extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: isSelected 
-                                    ? FontWeight.bold 
+                                    ? FontWeight.w600 
                                     : FontWeight.w500,
                                 color: isSelected 
                                     ? item['color']

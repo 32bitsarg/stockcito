@@ -8,6 +8,7 @@ import '../services/notification_service.dart';
 import '../config/app_theme.dart';
 import '../widgets/advanced_search_widget.dart';
 import '../widgets/animated_widgets.dart';
+import '../widgets/ai_recommendations_widget.dart';
 import 'modern_calculo_precio_screen.dart';
 import 'editar_producto_screen.dart';
 
@@ -102,6 +103,9 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
             const SizedBox(height: 24),
             // Filtros
             _buildFiltros(),
+            const SizedBox(height: 24),
+            // Recomendaciones de IA
+            const AIRecommendationsWidget(),
             const SizedBox(height: 24),
             // Lista de productos
             _buildListaProductos(),

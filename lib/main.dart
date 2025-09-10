@@ -7,6 +7,7 @@ import 'services/theme_service.dart';
 import 'services/theme_manager_service.dart';
 import 'services/windows_window_service.dart';
 import 'services/logging_service.dart';
+import 'services/smart_notification_service.dart';
 import 'widgets/window_manager_wrapper.dart';
 
 void main() async {
@@ -22,6 +23,11 @@ void main() async {
       await WindowsWindowService.initializeWindow();
       LoggingService.info('Ventana de Windows configurada correctamente');
     }
+    
+    // Inicializar servicio de notificaciones inteligentes
+    LoggingService.info('Inicializando notificaciones inteligentes...');
+    await SmartNotificationService().initialize();
+    LoggingService.info('Notificaciones inteligentes inicializadas');
     
     LoggingService.info('Iniciando Stockcito...');
     runApp(const MyApp());

@@ -48,6 +48,7 @@ dependencies:
   fl_chart: ^0.68.0
   flutter_local_notifications: ^17.2.3
   win32: ^5.5.0
+  math_expressions: ^2.6.0
 
 dev_dependencies:
   flutter_test:

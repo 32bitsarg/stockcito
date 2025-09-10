@@ -482,4 +482,32 @@ class DatabaseService {
     final ventas = await getVentasDelMes();
     return ventas.length;
   }
+
+  // Método para obtener ventas por rango de fechas
+  Future<List<Venta>> getVentasByDateRange(DateTime fechaInicio, DateTime fechaFin) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final List<Map<String, dynamic>> maps = await db.query(
+          'ventas',
+          where: 'fecha BETWEEN ? AND ?',
+          whereArgs: [
+            fechaInicio.toIso8601String(),
+            fechaFin.toIso8601String(),
+          ],
+          orderBy: 'fecha DESC',
+        );
+        
+        final ventas = <Venta>[];
+        for (var map in maps) {
+          final venta = Venta.fromMap(map);
+          final items = await _getVentaItems(venta.id!);
+          ventas.add(venta.copyWith(items: items));
+        }
+        
+        return ventas;
+      },
+      'getVentasByDateRange',
+    );
+  }
 }

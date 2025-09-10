@@ -6,11 +6,13 @@ import '../config/app_theme.dart';
 import '../widgets/modern_sidebar.dart';
 import '../widgets/modern_header.dart';
 import '../widgets/animated_widgets.dart';
-import '../widgets/tutorial_overlay_widget.dart';
-import '../widgets/notification_banner.dart';
-import '../widgets/notification_settings_widget.dart';
+import '../widgets/stock_recommendations_widget.dart';
+import '../widgets/notification_dropdown.dart';
+import '../widgets/notification_dropdown_widget.dart';
+import '../widgets/advanced_ai_analysis_widget.dart';
 import '../services/dashboard_service.dart';
 import '../services/notification_service.dart';
+import '../services/ai_insights_service.dart';
 import 'modern_calculo_precio_screen.dart';
 import 'modern_inventario_screen.dart';
 import 'modern_reportes_screen.dart';
@@ -28,12 +30,14 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   
-  // Claves globales para el tutorial
-  final GlobalKey _welcomeKey = GlobalKey();
-  final GlobalKey _metricsKey = GlobalKey();
-  final GlobalKey _chartKey = GlobalKey();
+  // Clave global para el menú
   final GlobalKey _menuKey = GlobalKey();
   final TextEditingController _searchController = TextEditingController();
+  
+  // Servicios de IA
+  final AIInsightsService _aiInsightsService = AIInsightsService();
+  AIInsights? _aiInsights;
+  bool _isLoadingInsights = false;
 
   @override
   void initState() {
@@ -43,7 +47,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context.read<DashboardService>().cargarDatos();
       // Inicializar servicio de notificaciones
       _initializeNotifications();
+      // Cargar insights de IA
+      _loadAIInsights();
     });
+  }
+
+  // Cargar insights de IA
+  Future<void> _loadAIInsights() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoadingInsights = true;
+    });
+
+    try {
+      final insights = await _aiInsightsService.generateInsights();
+      if (mounted) {
+        setState(() {
+          _aiInsights = insights;
+          _isLoadingInsights = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingInsights = false;
+        });
+      }
+      print('Error cargando insights de IA: $e');
+    }
   }
 
   Future<void> _initializeNotifications() async {
@@ -110,80 +142,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  void _showNotifications() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            FaIcon(FontAwesomeIcons.bell, color: AppTheme.primaryColor),
-            SizedBox(width: 12),
-            Text('Notificaciones'),
-          ],
-        ),
-        content: SizedBox(
-          width: 400,
-          height: 500,
-          child: Column(
-            children: [
-              // Configuración de notificaciones
-              Expanded(
-                child: NotificationList(
-                  notifications: NotificationService().scheduledNotifications,
-                  onNotificationTap: (notification) {
-                    // Manejar tap en notificación
-                    Navigator.pop(context);
-                  },
-                  onNotificationDismiss: (notification) {
-                    NotificationService().cancelNotification(notification.id);
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Botón de configuración
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showNotificationSettings();
-                },
-                icon: const FaIcon(FontAwesomeIcons.gear, size: 16),
-                label: const Text('Configurar Notificaciones'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryColor,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showNotificationSettings() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Configuración de Notificaciones'),
-        content: const SizedBox(
-          width: 500,
-          child: NotificationSettingsWidget(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
 
   final List<Map<String, dynamic>> _menuItems = [
     {'icon': FontAwesomeIcons.chartPie, 'label': 'Dashboard', 'color': AppTheme.primaryColor, 'subtitle': 'Resumen del negocio'},
@@ -199,48 +158,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _menuItems[_selectedIndex]['subtitle'] ?? '';
   }
 
-  void _showTutorialOverlay() {
-    final tutorialSteps = [
-      TutorialStep(
-        title: '¡Bienvenido a Stockcito!',
-        description: 'Esta es tu pantalla principal donde podrás ver un resumen completo de tu gestión de inventario y ventas.',
-        icon: FontAwesomeIcons.house,
-        color: AppTheme.primaryColor,
-        targetKey: _welcomeKey,
-      ),
-      TutorialStep(
-        title: 'Métricas Principales',
-        description: 'Aquí puedes ver las estadísticas más importantes: productos, ventas, clientes y valor del inventario.',
-        icon: FontAwesomeIcons.chartPie,
-        color: AppTheme.successColor,
-        targetKey: _metricsKey,
-      ),
-      TutorialStep(
-        title: 'Gráfico de Ventas',
-        description: 'Visualiza las ventas de los últimos 7 días para identificar tendencias y patrones.',
-        icon: FontAwesomeIcons.chartLine,
-        color: AppTheme.accentColor,
-        targetKey: _chartKey,
-      ),
-      TutorialStep(
-        title: 'Menú de Navegación',
-        description: 'Usa el menú lateral para acceder a todas las funciones: calcular precios, gestionar inventario, ventas y más.',
-        icon: FontAwesomeIcons.bars,
-        color: AppTheme.warningColor,
-        targetKey: _menuKey,
-      ),
-    ];
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => TutorialOverlayWidget(
-        steps: tutorialSteps,
-        onComplete: () {},
-        onSkip: () {},
+  // Método para realizar búsqueda
+  void _performSearch(String query) {
+    if (query.isEmpty) {
+      // Si la búsqueda está vacía, mostrar todos los datos
+      return;
+    }
+    
+    // Aquí puedes implementar la lógica de búsqueda
+    // Por ejemplo, filtrar productos, clientes, etc.
+    print('Buscando: $query');
+    
+    // Mostrar un snackbar con el resultado de la búsqueda
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Buscando: "$query"'),
+        duration: const Duration(seconds: 2),
+        backgroundColor: Colors.blue.shade600,
       ),
     );
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -262,26 +201,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             child: Column(
               children: [
-                ModernHeader(
-                  title: _menuItems[_selectedIndex]['label'],
-                  subtitle: _getSubtitle(),
-                  searchController: _searchController,
-                  onSearch: () {
-                    // Implementar búsqueda
-                  },
-                  actions: [
-                    // Botón de notificaciones
-                    IconButton(
-                      onPressed: _showNotifications,
-                      icon: const FaIcon(
-                        FontAwesomeIcons.bell,
-                        color: AppTheme.textPrimary,
-                      ),
-                      tooltip: 'Notificaciones',
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ),
+                // Header principal solo para otras pantallas (no dashboard)
+                if (_selectedIndex != 0)
+                  ModernHeader(
+                    title: _menuItems[_selectedIndex]['label'],
+                    subtitle: _getSubtitle(),
+                    searchController: _searchController,
+                    onSearch: () {
+                      // Implementar búsqueda
+                    },
+                    actions: [
+                      // Widget de notificaciones desplegable
+                      const NotificationDropdown(),
+                      const SizedBox(width: 8),
+                    ],
+                  ),
                 Expanded(
                   child: _buildMainContent(),
                 ),
@@ -327,6 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         if (dashboardService.error != null) {
           return Center(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
@@ -364,323 +299,699 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         }
         
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome section compacta
-              AnimatedCard(
-                delay: const Duration(milliseconds: 100),
-                child: Container(
-                  key: _welcomeKey,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '¡Bienvenido a Stockcito!',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Administra tu emprendimiento en un solo lugar',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                AnimatedButton(
-                                  text: 'Tutorial',
-                                  icon: FontAwesomeIcons.graduationCap,
-                                  type: ButtonType.success,
-                                  delay: const Duration(milliseconds: 200),
-                                  onPressed: _showTutorialOverlay,
-                                ),
-                              ],
-                            ),
-                          ],
+        return Row(
+          children: [
+            // Columna izquierda - Contenido principal
+            Expanded(
+              flex: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Header falso del dashboard simplificado
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.grey.shade200,
+                            width: 1,
+                          ),
                         ),
                       ),
-                      const Icon(
-                        FontAwesomeIcons.baby,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Métricas principales en grid compacto
-              Container(
-                key: _metricsKey,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AnimatedMetricCard(
-                        title: 'Productos',
-                        value: '${dashboardService.totalProductos}',
-                        icon: FontAwesomeIcons.boxesStacked,
-                        color: AppTheme.primaryColor,
-                        delay: const Duration(milliseconds: 200),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AnimatedMetricCard(
-                        title: 'Ventas del Mes',
-                        value: '${dashboardService.ventasRecientes.length}',
-                        icon: FontAwesomeIcons.arrowTrendUp,
-                        color: AppTheme.successColor,
-                        trend: '+12%',
-                        delay: const Duration(milliseconds: 300),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AnimatedMetricCard(
-                        title: 'Total Clientes',
-                        value: '${dashboardService.totalClientes}',
-                        icon: FontAwesomeIcons.users,
-                        color: AppTheme.accentColor,
-                        trend: '+5%',
-                        delay: const Duration(milliseconds: 400),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: AnimatedMetricCard(
-                        title: 'Valor Inventario',
-                        value: '\$${dashboardService.valorInventario.toStringAsFixed(0)}',
-                        icon: FontAwesomeIcons.tag,
-                        color: AppTheme.secondaryColor,
-                        delay: const Duration(milliseconds: 500),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Sección de Información del Negocio
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Información del Negocio - Columna izquierda
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          const Text(
-                            'Información del Negocio',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
-                            ),
+                          // Título y subtítulo
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Dashboard',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const Text(
+                                'Resumen del negocio',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  _buildInfoCard(
-                                    'Margen Promedio',
-                                    '${dashboardService.margenPromedio.toStringAsFixed(1)}%',
-                                    FontAwesomeIcons.percent,
-                                    AppTheme.warningColor,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildInfoCard(
-                                    'Stock Bajo',
-                                    '${dashboardService.stockBajo} productos',
-                                    FontAwesomeIcons.triangleExclamation,
-                                    AppTheme.errorColor,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  _buildInfoCard(
-                                    'Productos Activos',
-                                    '${dashboardService.totalProductos} en catálogo',
-                                    FontAwesomeIcons.list,
-                                    AppTheme.accentColor,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Consumer<DashboardService>(
-                                    builder: (context, dashboardService, child) {
-                                      return _buildInfoCard(
-                                        'Última Venta',
-                                        _getLastSaleDateText(dashboardService),
-                                        FontAwesomeIcons.clock,
-                                        AppTheme.successColor,
-                                      );
-                                    },
-                                  ),
-                                ],
+                          const Spacer(),
+                          // Buscador compacto funcional
+                          Container(
+                            width: 200,
+                            height: 32,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1,
                               ),
                             ),
+                            child: TextField(
+                              controller: _searchController,
+                              decoration: const InputDecoration(
+                                hintText: 'Buscar productos, clientes...',
+                                hintStyle: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                                prefixIcon: Icon(
+                                  FontAwesomeIcons.magnifyingGlass,
+                                  size: 12,
+                                  color: Colors.grey,
+                                ),
+                                prefixIconConstraints: BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Colors.black87,
+                              ),
+                              onChanged: (value) {
+                                // Implementar búsqueda en tiempo real
+                                _performSearch(value);
+                              },
+                              onSubmitted: (value) {
+                                // Implementar búsqueda al presionar Enter
+                                _performSearch(value);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Notificaciones desplegables modernas
+                          const NotificationDropdownWidget(),
+                          const SizedBox(width: 8),
+                          // Perfil
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              FontAwesomeIcons.user,
+                              color: Colors.grey.shade600,
+                              size: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Botón de tutorial
+                          AnimatedButton(
+                            text: 'Tutorial',
+                            type: ButtonType.success,
+                            onPressed: () {
+                              // TODO: Implementar tutorial
+                            },
+                            icon: FontAwesomeIcons.graduationCap,
+                            delay: const Duration(milliseconds: 100),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    // Gráfico de ventas - Columna derecha
+                    const SizedBox(height: 20),
+                    
+                    // Métricas principales en diseño minimalista
+                    _buildMinimalistMetrics(dashboardService),
+                    const SizedBox(height: 12),
+                    
+                    // Contenido principal
                     Expanded(
-                      flex: 2,
-                      child: AnimatedCard(
-                        delay: const Duration(milliseconds: 600),
-                        child: Container(
-                          key: _chartKey,
-                          height: 200,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: AppTheme.borderColor,
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Ventas Recientes',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.textPrimary,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.successColor.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'Últimos 7 días',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: AppTheme.successColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Expanded(
-                                  child: _buildSalesChart(),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                      child: Column(
+                        children: [
+                          _buildBusinessInfo(dashboardService),
+                          const SizedBox(height: 12),
+                          _buildMinimalistChart(dashboardService),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+            
+            // Columna derecha - Sidebar de IA que ocupa todo el alto de la ventana
+            Expanded(
+              flex: 1,
+              child: _buildRightSidebar(),
+            ),
+          ],
         );
       },
     );
   }
 
 
-  Widget _buildInfoCard(String title, String value, IconData icon, Color color) {
+
+
+
+  Widget _buildMinimalistMetrics(DashboardService dashboardService) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildMinimalistMetricCard(
+            'Productos',
+            '${dashboardService.totalProductos}',
+            FontAwesomeIcons.boxesStacked,
+            '+12%',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildMinimalistMetricCard(
+            'Ventas del Mes',
+            '${dashboardService.ventasRecientes.length}',
+            FontAwesomeIcons.arrowTrendUp,
+            '+8%',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildMinimalistMetricCard(
+            'Clientes',
+            '${dashboardService.totalClientes}',
+            FontAwesomeIcons.users,
+            '+5%',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildMinimalistMetricCard(
+            'Valor Inventario',
+            '\$${dashboardService.valorInventario.toStringAsFixed(0)}',
+            FontAwesomeIcons.tag,
+            '+15%',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMinimalistMetricCard(String title, String value, IconData icon, String trend) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withOpacity(0.2),
+          color: AppTheme.borderColor,
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 16,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Icon(
+                icon,
+                color: AppTheme.textSecondary,
+                size: 20,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  trend,
+                  style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.successColor,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessInfo(DashboardService dashboardService) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.borderColor,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Información del Negocio',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoItem(
+                  'Margen Promedio',
+                  '${dashboardService.margenPromedio.toStringAsFixed(1)}%',
+                  FontAwesomeIcons.percent,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildInfoItem(
+                  'Stock Bajo',
+                  '${dashboardService.stockBajo} productos',
+                  FontAwesomeIcons.triangleExclamation,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoItem(
+                  'Última Venta',
+                  _getLastSaleDateText(dashboardService),
+                  FontAwesomeIcons.clock,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildInfoItem(
+                  'Estado',
+                  'Activo',
+                  FontAwesomeIcons.checkCircle,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: AppTheme.textSecondary,
+          size: 16,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRightSidebar() {
+    return Container(
+      height: double.infinity, // Usar todo el alto disponible
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header completo de la aplicación que reemplaza el header principal
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Título de IA en la parte superior
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(
+                        FontAwesomeIcons.brain,
+                        color: Colors.blue.shade600,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Análisis de IA',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
+            ),
+          ),
+          
+          // Pestañas de IA
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                _buildAITab('Insights', true),
+                const SizedBox(width: 16),
+                _buildAITab('Recomendaciones', false),
+              ],
+            ),
+          ),
+          
+          // Contenido de IA - Usar todo el espacio disponible
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                children: [
+                  // Insights principales - Generados por IA
+                  if (_isLoadingInsights)
+                    _buildLoadingInsight()
+                  else if (_aiInsights != null)
+                    ..._buildAIInsights()
+                  else
+                    _buildNoDataInsight(),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Widget de análisis avanzado
+                  const AdvancedAIAnalysisWidget(),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Recomendaciones de stock
+                  const StockRecommendationsWidget(),
+                  
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAITab(String label, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: isSelected ? Colors.blue.shade100 : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600,
+        ),
+      ),
+    );
+  }
+
+  // Construir insights generados por IA
+  List<Widget> _buildAIInsights() {
+    final List<Widget> insights = [];
+    
+    if (_aiInsights == null) return insights;
+
+    // Tendencia de ventas
+    final salesTrend = _aiInsights!.salesTrend;
+    final salesColor = _getColorFromString(salesTrend.color);
+    insights.add(
+      _buildDirectInsightItem(
+        FontAwesomeIcons.chartLine,
+        'Tendencia de Ventas',
+        '${salesTrend.growthPercentage.toStringAsFixed(1)}% ${salesTrend.trend.toLowerCase()}',
+        '${salesTrend.bestDay}: mejor día de ventas',
+        salesColor,
+      ),
+    );
+    insights.add(const SizedBox(height: 12));
+
+    // Productos populares
+    final popularProducts = _aiInsights!.popularProducts;
+    final popularColor = _getColorFromString(popularProducts.color);
+    insights.add(
+      _buildDirectInsightItem(
+        FontAwesomeIcons.star,
+        'Productos Populares',
+        popularProducts.topProduct,
+        '${popularProducts.salesCount} ventas esta semana',
+        popularColor,
+      ),
+    );
+    insights.add(const SizedBox(height: 12));
+
+    // Recomendaciones de stock
+    for (final recommendation in _aiInsights!.stockRecommendations) {
+      final stockColor = _getColorFromString(recommendation.color);
+      final icon = _getIconFromAction(recommendation.action);
+      
+      insights.add(
+        _buildDirectInsightItem(
+          icon,
+          '${recommendation.action} Stock',
+          recommendation.productName,
+          recommendation.details,
+          stockColor,
+        ),
+      );
+      insights.add(const SizedBox(height: 12));
+    }
+
+    return insights;
+  }
+
+  // Widget de carga
+  Widget _buildLoadingInsight() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'Analizando datos con IA...',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget sin datos
+  Widget _buildNoDataInsight() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            FontAwesomeIcons.exclamationTriangle,
+            color: Colors.grey.shade400,
+            size: 16,
+          ),
+          const SizedBox(width: 12),
+          const Text(
+            'No hay datos suficientes para análisis',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Convertir string de color a Color
+  Color _getColorFromString(String colorString) {
+    switch (colorString.toLowerCase()) {
+      case 'green': return Colors.green;
+      case 'red': return Colors.red;
+      case 'orange': return Colors.orange;
+      case 'blue': return Colors.blue;
+      case 'purple': return Colors.purple;
+      default: return Colors.grey;
+    }
+  }
+
+  // Obtener icono basado en la acción
+  IconData _getIconFromAction(String action) {
+    switch (action.toLowerCase()) {
+      case 'aumentar': return FontAwesomeIcons.arrowUp;
+      case 'reducir': return FontAwesomeIcons.arrowDown;
+      case 'mantener': return FontAwesomeIcons.check;
+      default: return FontAwesomeIcons.lightbulb;
+    }
+  }
+
+  Widget _buildDirectInsightItem(IconData icon, String title, String mainInfo, String detailInfo, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            mainInfo,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            detailInfo,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade600,
             ),
           ),
         ],
@@ -690,7 +1001,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 
 
-  Widget _buildSalesChart() {
+  Widget _buildMinimalistChart(DashboardService dashboardService) {
+    return Container(
+      height: 150, // Altura reducida para evitar overflow
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppTheme.borderColor,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                FontAwesomeIcons.chartLine,
+                color: AppTheme.primaryColor,
+                size: 16,
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Ventas Semanales',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildModernChart(),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+
+  Widget _buildModernChart() {
     return Consumer<DashboardService>(
       builder: (context, dashboardService, child) {
         // Obtener datos reales de ventas de los últimos 7 días
@@ -709,48 +1065,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
         
         final maxValue = salesData.map((e) => e['count'] as int).reduce((a, b) => a > b ? a : b);
-        final maxHeight = maxValue > 0 ? 80.0 : 80.0;
+        final maxHeight = maxValue > 0 ? 100.0 : 100.0;
         
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: salesData.map((data) {
-            final count = data['count'] as int;
-            final day = data['day'] as String;
-            final height = maxValue > 0 ? (count / maxValue) * maxHeight : 0.0;
-            
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Container(
-                  width: 20,
-                  height: height,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(4),
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: salesData.map((data) {
+              final count = data['count'] as int;
+              final day = data['day'] as String;
+              final height = maxValue > 0 ? (count / maxValue) * maxHeight : 0.0;
+              final isToday = data['date'] == DateTime.now().subtract(const Duration(days: 0));
+              
+              return Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Barra del gráfico
+                      Container(
+                        width: double.infinity,
+                        height: height,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: isToday 
+                              ? [AppTheme.primaryColor, AppTheme.primaryColor.withOpacity(0.7)]
+                              : [AppTheme.primaryColor.withOpacity(0.6), AppTheme.primaryColor.withOpacity(0.3)],
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Día de la semana
+                      Text(
+                        day,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isToday ? AppTheme.primaryColor : AppTheme.textSecondary,
+                          fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Número de ventas
+                      Text(
+                        '$count',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isToday ? AppTheme.primaryColor : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  day,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (count > 0)
-                  Text(
-                    '$count',
-                    style: const TextStyle(
-                      fontSize: 8,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-              ],
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         );
       },
     );
