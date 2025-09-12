@@ -51,6 +51,32 @@ class DatosService {
       LoggingService.error('Error entrenando IA: $e');
     }
   }
+
+  /// Elimina una venta
+  Future<void> deleteVenta(int id) async {
+    try {
+      LoggingService.info('Eliminando venta con ID: $id');
+      
+      if (_authService?.isSignedIn == true) {
+        // Usuario autenticado: eliminar de Supabase y local
+        await Supabase.instance.client
+            .from('ventas')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', _authService!.currentUserId!);
+        
+        LoggingService.info('Venta eliminada de Supabase');
+      }
+      
+      // Eliminar de base de datos local
+      await _localDb.deleteVenta(id);
+      LoggingService.info('Venta eliminada de base de datos local');
+      
+    } catch (e) {
+      LoggingService.error('Error eliminando venta: $e');
+      rethrow;
+    }
+  }
   
   /// Helper para verificar si el usuario está autenticado
   bool get _isSignedIn => _authService?.isSignedIn ?? false;
