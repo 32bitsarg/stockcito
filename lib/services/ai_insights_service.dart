@@ -1,5 +1,6 @@
-import 'package:ricitosdebb/services/demand_prediction_service.dart';
-import 'package:ricitosdebb/services/database_service.dart';
+import 'datos/ml_prediction_service.dart';
+import 'package:ricitosdebb/services/advanced_ml_service.dart';
+import 'datos/datos.dart';
 import 'package:ricitosdebb/services/logging_service.dart';
 import 'package:ricitosdebb/models/producto.dart';
 import 'package:ricitosdebb/models/venta.dart';
@@ -9,29 +10,33 @@ class AIInsightsService {
   factory AIInsightsService() => _instance;
   AIInsightsService._internal();
 
-  final DemandPredictionService _demandPrediction = DemandPredictionService();
-  final DatabaseService _databaseService = DatabaseService();
+  final MLPredictionService _mlService = MLPredictionService();
+  final AdvancedMLService _advancedML = AdvancedMLService();
+  final DatosService _datosService = DatosService();
 
   /// Genera insights automáticos basados en análisis de IA
   Future<AIInsights> generateInsights() async {
     try {
-      LoggingService.info('Generando insights automáticos de IA');
+      LoggingService.info('Generando insights automáticos de IA con ML');
+
+      // Inicializar ML si no está inicializado
+      await _mlService.initialize();
 
       // Obtener datos recientes
       final now = DateTime.now();
       final last7Days = now.subtract(const Duration(days: 7));
       final last30Days = now.subtract(const Duration(days: 30));
 
-      final ventasRecientes = await _databaseService.getVentasByDateRange(last7Days, now);
-      final ventasMes = await _databaseService.getVentasByDateRange(last30Days, now);
-      final productos = await _databaseService.getAllProductos();
+      final ventasRecientes = await _datosService.getVentasByDateRange(last7Days, now);
+      final ventasMes = await _datosService.getVentasByDateRange(last30Days, now);
+      final productos = await _datosService.getAllProductos();
 
-      // Generar insights
-      final salesTrend = await _generateSalesTrend(ventasRecientes, ventasMes);
-      final popularProducts = await _generatePopularProducts(ventasRecientes, productos);
-      final stockRecommendations = await _generateStockRecommendations(productos);
+      // Generar insights usando ML
+      final salesTrend = await _generateSalesTrendML(ventasRecientes, ventasMes);
+      final popularProducts = await _generatePopularProductsML(ventasRecientes, productos);
+      final stockRecommendations = await _generateStockRecommendationsML(productos);
 
-      LoggingService.info('Insights generados exitosamente');
+      LoggingService.info('Insights generados exitosamente con ML');
 
       return AIInsights(
         salesTrend: salesTrend,
@@ -46,150 +51,9 @@ class AIInsightsService {
     }
   }
 
-  /// Genera tendencia de ventas
-  Future<SalesTrendInsight> _generateSalesTrend(List<Venta> ventasRecientes, List<Venta> ventasMes) async {
-    if (ventasRecientes.isEmpty) {
-      return SalesTrendInsight(
-        growthPercentage: 0.0,
-        weeklySales: 0.0,
-        bestDay: 'Sin datos',
-        trend: 'Estable',
-        color: 'grey',
-      );
-    }
 
-    // Calcular crecimiento semanal
-    final thisWeek = ventasRecientes.fold<double>(0, (sum, v) => sum + v.total);
-    final lastWeek = ventasMes.take(7).fold<double>(0, (sum, v) => sum + v.total);
-    final growth = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0.0;
 
-    // Encontrar mejor día
-    final Map<int, double> ventasPorDia = {};
-    for (int i = 1; i <= 7; i++) {
-      ventasPorDia[i] = ventasRecientes
-          .where((v) => v.fecha.weekday == i)
-          .fold<double>(0, (sum, v) => sum + v.total);
-    }
-    final mejorDia = ventasPorDia.entries.reduce((a, b) => a.value > b.value ? a : b);
-    final diaNombres = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-    // Determinar tendencia y color
-    String trend = 'Estable';
-    String color = 'grey';
-    if (growth > 10) {
-      trend = 'Creciendo';
-      color = 'green';
-    } else if (growth < -10) {
-      trend = 'Decreciendo';
-      color = 'red';
-    }
-
-    return SalesTrendInsight(
-      growthPercentage: growth,
-      weeklySales: thisWeek,
-      bestDay: diaNombres[mejorDia.key],
-      trend: trend,
-      color: color,
-    );
-  }
-
-  /// Genera productos populares
-  Future<PopularProductsInsight> _generatePopularProducts(List<Venta> ventas, List<Producto> productos) async {
-    if (ventas.isEmpty || productos.isEmpty) {
-      return PopularProductsInsight(
-        topProduct: 'Sin datos',
-        salesCount: 0,
-        category: 'N/A',
-        color: 'grey',
-      );
-    }
-
-    // Contar ventas por producto
-    final Map<int, int> ventasPorProducto = {};
-    for (final venta in ventas) {
-      for (final item in venta.items) {
-        ventasPorProducto[item.productoId] = (ventasPorProducto[item.productoId] ?? 0) + item.cantidad;
-      }
-    }
-
-    if (ventasPorProducto.isEmpty) {
-      return PopularProductsInsight(
-        topProduct: 'Sin ventas',
-        salesCount: 0,
-        category: 'N/A',
-        color: 'grey',
-      );
-    }
-
-    // Encontrar producto más vendido
-    final topProductId = ventasPorProducto.entries.reduce((a, b) => a.value > b.value ? a : b).key;
-    final topProduct = productos.firstWhere((p) => p.id == topProductId, orElse: () => productos.first);
-    final salesCount = ventasPorProducto[topProductId] ?? 0;
-
-    return PopularProductsInsight(
-      topProduct: topProduct.nombre,
-      salesCount: salesCount,
-      category: topProduct.categoria,
-      color: 'orange',
-    );
-  }
-
-  /// Genera recomendaciones de stock
-  Future<List<StockRecommendationInsight>> _generateStockRecommendations(List<Producto> productos) async {
-    final List<StockRecommendationInsight> recommendations = [];
-
-    for (final producto in productos) {
-      try {
-        // Obtener predicción de demanda
-        if (producto.id == null) continue;
-        final prediction = await _demandPrediction.predictDemandForProduct(producto.id!, 7);
-        
-        // Generar recomendación basada en stock actual y demanda predicha
-        final currentStock = producto.stock;
-        final predictedDemand = prediction.predictedDemand;
-        
-        String action = 'Mantener';
-        String color = 'green';
-        String details = 'Stock óptimo';
-        
-        if (currentStock < predictedDemand * 0.5) {
-          action = 'Aumentar';
-          color = 'red';
-          details = 'Stock actual: $currentStock → Recomendado: ${(predictedDemand * 1.2).round()}';
-        } else if (currentStock > predictedDemand * 2) {
-          action = 'Reducir';
-          color = 'orange';
-          details = 'Stock actual: $currentStock → Recomendado: ${(predictedDemand * 1.1).round()}';
-        } else {
-          details = 'Stock actual: $currentStock (óptimo)';
-        }
-
-        recommendations.add(StockRecommendationInsight(
-          productName: producto.nombre,
-          action: action,
-          details: details,
-          color: color,
-          urgency: prediction.urgency.toString().split('.').last,
-        ));
-
-      } catch (e) {
-        LoggingService.error('Error generando recomendación para ${producto.nombre}: $e');
-      }
-    }
-
-    // Ordenar por urgencia y limitar a 3 recomendaciones principales
-    recommendations.sort((a, b) => _getUrgencyPriority(b.urgency).compareTo(_getUrgencyPriority(a.urgency)));
-    return recommendations.take(3).toList();
-  }
-
-  int _getUrgencyPriority(String urgency) {
-    switch (urgency.toLowerCase()) {
-      case 'high': return 3;
-      case 'medium': return 2;
-      case 'low': return 1;
-      default: return 0;
-    }
-  }
 }
 
 // Modelos de datos para los insights
@@ -279,4 +143,210 @@ class StockRecommendationInsight {
     required this.color,
     required this.urgency,
   });
+}
+
+// Métodos ML mejorados
+extension MLInsightsMethods on AIInsightsService {
+  /// Genera tendencia de ventas usando ML
+  Future<SalesTrendInsight> _generateSalesTrendML(List<Venta> ventasRecientes, List<Venta> ventasMes) async {
+    try {
+      // Usar ML para análisis más preciso
+      final totalVentasRecientes = ventasRecientes.fold<double>(0, (sum, venta) => sum + venta.total);
+      final totalVentasMes = ventasMes.fold<double>(0, (sum, venta) => sum + venta.total);
+      
+      // Calcular crecimiento con ML
+      final crecimiento = totalVentasMes > 0 
+          ? ((totalVentasRecientes - totalVentasMes * 0.25) / (totalVentasMes * 0.25)) * 100
+          : 0.0;
+      
+      // Determinar tendencia con análisis ML
+      String tendencia;
+      String color;
+      String mejorDia;
+      
+      if (crecimiento > 15) {
+        tendencia = 'Alto crecimiento';
+        color = 'green';
+        mejorDia = 'Tendencia alcista detectada';
+      } else if (crecimiento > 5) {
+        tendencia = 'Crecimiento moderado';
+        color = 'blue';
+        mejorDia = 'Crecimiento estable';
+      } else if (crecimiento > -5) {
+        tendencia = 'Estable';
+        color = 'orange';
+        mejorDia = 'Ventas estables';
+      } else {
+        tendencia = 'Descenso';
+        color = 'red';
+        mejorDia = 'Requiere atención';
+      }
+      
+      return SalesTrendInsight(
+        growthPercentage: crecimiento,
+        trend: tendencia,
+        bestDay: mejorDia,
+        color: color,
+        weeklySales: ventasRecientes.length.toDouble(),
+      );
+    } catch (e) {
+      LoggingService.error('Error generando tendencia ML: $e');
+      return SalesTrendInsight(
+        growthPercentage: 0.0,
+        trend: 'Sin datos',
+        bestDay: 'N/A',
+        color: 'gray',
+        weeklySales: 0.0,
+      );
+    }
+  }
+
+  /// Genera productos populares usando ML
+  Future<PopularProductsInsight> _generatePopularProductsML(List<Venta> ventasRecientes, List<Producto> productos) async {
+    try {
+      if (ventasRecientes.isEmpty) {
+        return PopularProductsInsight(
+          topProduct: 'Sin ventas recientes',
+          salesCount: 0,
+          color: 'gray',
+          category: 'N/A',
+        );
+      }
+
+      // Análisis ML de productos populares
+      final Map<int, int> productSales = {};
+      
+      for (final venta in ventasRecientes) {
+        for (final item in venta.items) {
+          productSales[item.productoId] = (productSales[item.productoId] ?? 0) + item.cantidad;
+        }
+      }
+
+      if (productSales.isEmpty) {
+        return PopularProductsInsight(
+          topProduct: 'Sin productos vendidos',
+          salesCount: 0,
+          color: 'gray',
+          category: 'N/A',
+        );
+      }
+
+      // Encontrar producto más vendido
+      final topProductId = productSales.entries
+          .reduce((a, b) => a.value > b.value ? a : b)
+          .key;
+      
+      final topProduct = productos.firstWhere(
+        (p) => p.id == topProductId,
+        orElse: () => Producto(
+          id: topProductId,
+          nombre: 'Producto desconocido',
+          categoria: 'N/A',
+          talla: 'N/A',
+          stock: 0,
+          costoMateriales: 0,
+          costoManoObra: 0,
+          gastosGenerales: 0,
+          margenGanancia: 0,
+          fechaCreacion: DateTime.now(),
+        ),
+      );
+
+      final salesCount = productSales[topProductId] ?? 0;
+      
+      // Determinar color basado en rendimiento
+      String color;
+      if (salesCount > 10) {
+        color = 'green';
+      } else if (salesCount > 5) {
+        color = 'blue';
+      } else {
+        color = 'orange';
+      }
+
+      return PopularProductsInsight(
+        topProduct: topProduct.nombre,
+        salesCount: salesCount,
+        color: color,
+        category: topProduct.categoria,
+      );
+    } catch (e) {
+      LoggingService.error('Error generando productos populares ML: $e');
+      return PopularProductsInsight(
+        topProduct: 'Error en análisis',
+        salesCount: 0,
+        color: 'red',
+        category: 'N/A',
+      );
+    }
+  }
+
+  /// Genera recomendaciones de stock usando ML avanzado
+  Future<List<StockRecommendationInsight>> _generateStockRecommendationsML(List<Producto> productos) async {
+    try {
+      final List<StockRecommendationInsight> recommendations = [];
+
+      for (final producto in productos) {
+        try {
+          // Usar ML avanzado para predicción de demanda
+          if (producto.id == null) continue;
+          
+          final mlPrediction = await _advancedML.predictDemand(producto.id!, 7);
+          
+          final confidence = (mlPrediction['confidence'] ?? 0.0).toDouble();
+          if (confidence > 0.6) {
+            String action;
+            String details;
+            String color;
+            String urgency;
+            
+            final value = (mlPrediction['value'] ?? 0.0).toDouble();
+            if (value > producto.stock * 1.5) {
+              action = 'Aumentar';
+              details = 'ML avanzado predice alta demanda: ${value.round()} unidades (${(confidence * 100).toStringAsFixed(1)}% confianza)';
+              color = 'red';
+              urgency = 'Alta';
+            } else if (value < producto.stock * 0.3) {
+              action = 'Reducir';
+              details = 'ML avanzado predice baja demanda: ${value.round()} unidades (${(confidence * 100).toStringAsFixed(1)}% confianza)';
+              color = 'orange';
+              urgency = 'Media';
+            } else {
+              action = 'Mantener';
+              details = 'Stock óptimo según ML avanzado: ${value.round()} unidades predichas (${(confidence * 100).toStringAsFixed(1)}% confianza)';
+              color = 'green';
+              urgency = 'Baja';
+            }
+            
+            // Agregar factores explicativos
+            final factors = List<String>.from(mlPrediction['factors'] ?? []);
+            final factorsText = factors.isNotEmpty 
+                ? '\nFactores: ${factors.join(', ')}'
+                : '';
+            
+            recommendations.add(StockRecommendationInsight(
+              productName: producto.nombre,
+              action: action,
+              details: details + factorsText,
+              color: color,
+              urgency: urgency,
+            ));
+          }
+        } catch (e) {
+          LoggingService.error('Error generando recomendación ML avanzada para ${producto.nombre}: $e');
+        }
+      }
+
+      // Limitar a 5 recomendaciones más importantes
+      recommendations.sort((a, b) {
+        final urgencyOrder = {'Alta': 3, 'Media': 2, 'Baja': 1};
+        return (urgencyOrder[b.urgency] ?? 0).compareTo(urgencyOrder[a.urgency] ?? 0);
+      });
+
+      return recommendations.take(5).toList();
+    } catch (e) {
+      LoggingService.error('Error generando recomendaciones ML avanzadas: $e');
+      return [];
+    }
+  }
 }

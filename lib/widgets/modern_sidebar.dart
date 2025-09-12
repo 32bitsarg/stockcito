@@ -16,33 +16,33 @@ class ModernSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> menuItems = [
       {
-        'icon': FontAwesomeIcons.chartPie,
+        'icon': FontAwesomeIcons.house,
         'label': 'Dashboard',
         'color': AppTheme.primaryColor,
       },
       {
-        'icon': FontAwesomeIcons.calculator,
-        'label': 'Calcular',
-        'color': AppTheme.secondaryColor,
-      },
-      {
         'icon': FontAwesomeIcons.boxesStacked,
         'label': 'Inventario',
-        'color': AppTheme.accentColor,
+        'color': AppTheme.successColor,
       },
       {
-        'icon': FontAwesomeIcons.cartShopping,
+        'icon': FontAwesomeIcons.chartLine,
         'label': 'Ventas',
-        'color': AppTheme.successColor,
+        'color': AppTheme.warningColor,
       },
       {
         'icon': FontAwesomeIcons.users,
         'label': 'Clientes',
-        'color': AppTheme.warningColor,
+        'color': AppTheme.accentColor,
       },
       {
-        'icon': FontAwesomeIcons.chartLine,
+        'icon': FontAwesomeIcons.chartBar,
         'label': 'Reportes',
+        'color': AppTheme.primaryColor,
+      },
+      {
+        'icon': FontAwesomeIcons.calculator,
+        'label': 'Cálculo de Precios',
         'color': AppTheme.errorColor,
       },
       {
@@ -79,10 +79,35 @@ class ModernSidebar extends StatelessWidget {
                 bottomRight: Radius.circular(24),
               ),
             ),
-            child: const Center(
-              child: Text(
-                '🧸',
-                style: TextStyle(fontSize: 36),
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, Colors.white70],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text(
+                    'S',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryColor,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -103,50 +128,63 @@ class ModernSidebar extends StatelessWidget {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () => onItemSelected(index),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                      child: Container(
                         height: 60,
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(16),
-                          // Indicador minimalista: línea vertical sutil
-                          border: isSelected
-                              ? Border(
-                                  left: BorderSide(
-                                    color: item['color'],
-                                    width: 3,
-                                  ),
-                                )
-                              : null,
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              child: Icon(
-                                item['icon'],
-                                color: isSelected 
-                                    ? item['color']
-                                    : AppTheme.textSecondary,
-                                size: 22,
+                            // Línea indicadora de selección
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              width: isSelected ? 3 : 0,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: isSelected ? item['color'] : Colors.transparent,
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(2),
+                                  bottomRight: Radius.circular(2),
+                                ),
+                                boxShadow: isSelected ? [
+                                  BoxShadow(
+                                    color: item['color'].withOpacity(0.3),
+                                    blurRadius: 6,
+                                    spreadRadius: 1,
+                                    offset: const Offset(2, 0),
+                                  ),
+                                ] : null,
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['label'],
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: isSelected 
-                                    ? FontWeight.w600 
-                                    : FontWeight.w500,
-                                color: isSelected 
-                                    ? item['color']
-                                    : AppTheme.textSecondary,
+                            // Contenido principal
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Icon(
+                                      item['icon'],
+                                      color: AppTheme.textSecondary,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item['label'],
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

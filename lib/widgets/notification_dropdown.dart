@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
-import 'package:ricitosdebb/services/notification_service.dart';
 
 class NotificationDropdown extends StatefulWidget {
   const NotificationDropdown({Key? key}) : super(key: key);
@@ -11,7 +10,6 @@ class NotificationDropdown extends StatefulWidget {
 }
 
 class _NotificationDropdownState extends State<NotificationDropdown> {
-  final NotificationService _notificationService = NotificationService();
   bool _isOpen = false;
   List<Map<String, dynamic>> _notifications = [];
 

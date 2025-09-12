@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_theme.dart';
-import '../services/trend_analysis_service.dart';
+import '../services/datos/trend_analysis_service.dart';
 
 class AIInsightsWidget extends StatefulWidget {
   const AIInsightsWidget({super.key});
@@ -142,31 +142,6 @@ class _AIInsightsWidgetState extends State<AIInsightsWidget> {
     );
   }
 
-  Widget _buildBusinessInsights() {
-    final trends = _businessTrends!;
-    final tendencia = trends['tendenciaTemporal'] as String;
-    final categoriaTop = trends['categoriaTop'] as String;
-    final recomendaciones = trends['recomendaciones'] as List<String>;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Análisis del Negocio',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildTrendCard(tendencia),
-        const SizedBox(height: 8),
-        _buildCategoryCard(categoriaTop),
-        const SizedBox(height: 8),
-        _buildRecommendationsCard(recomendaciones),
-      ],
-    );
-  }
 
   Widget _buildBusinessInsightsCompact() {
     final trends = _businessTrends!;
@@ -186,28 +161,6 @@ class _AIInsightsWidgetState extends State<AIInsightsWidget> {
     );
   }
 
-  Widget _buildInventoryInsights() {
-    final trends = _inventoryTrends!;
-    final resumen = trends['resumen'] as Map<String, dynamic>;
-    final recomendaciones = trends['recomendaciones'] as List<Map<String, dynamic>>;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Análisis de Inventario',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        _buildInventorySummaryCard(resumen),
-        const SizedBox(height: 8),
-        _buildInventoryRecommendationsCard(recomendaciones),
-      ],
-    );
-  }
 
   Widget _buildInventoryInsightsCompact() {
     final trends = _inventoryTrends!;

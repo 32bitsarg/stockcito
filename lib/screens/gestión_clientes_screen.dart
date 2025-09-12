@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/cliente.dart';
-import '../services/database_service.dart';
+import '../services/datos/datos.dart';
 import '../config/app_theme.dart';
 import '../widgets/windows_button.dart';
 
@@ -12,7 +12,7 @@ class GestionClientesScreen extends StatefulWidget {
 }
 
 class _GestionClientesScreenState extends State<GestionClientesScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   List<Cliente> _clientes = [];
   bool _isLoading = true;
   String _filtroBusqueda = '';
@@ -25,7 +25,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 
   Future<void> _loadClientes() async {
     try {
-      final clientes = await _databaseService.getAllClientes();
+      final clientes = await _datosService.getClientes();
       setState(() {
         _clientes = clientes;
         _isLoading = false;
@@ -772,7 +772,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
           direccion: direccion,
           notas: notas,
         );
-        await _databaseService.updateCliente(clienteActualizado);
+        await _datosService.updateCliente(clienteActualizado);
       } else {
         // Crear nuevo cliente
         final nuevoCliente = Cliente(
@@ -783,7 +783,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
           fechaRegistro: DateTime.now(),
           notas: notas,
         );
-        await _databaseService.insertCliente(nuevoCliente);
+        await _datosService.saveCliente(nuevoCliente);
       }
 
       // Cerrar modal y recargar datos
@@ -839,7 +839,7 @@ class _GestionClientesScreenState extends State<GestionClientesScreen> {
 
     if (confirmar == true) {
       try {
-        await _databaseService.deleteCliente(cliente.id!);
+        await _datosService.deleteCliente(cliente.id!);
         await _loadClientes();
 
         if (mounted) {

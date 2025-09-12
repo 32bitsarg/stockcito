@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:ricitosdebb/models/producto.dart';
 import 'package:ricitosdebb/models/venta.dart';
-import 'package:ricitosdebb/services/database_service.dart';
+import 'datos.dart';
 import 'package:ricitosdebb/services/logging_service.dart';
 
 class DemandPredictionService {
@@ -9,8 +9,7 @@ class DemandPredictionService {
   factory DemandPredictionService() => _instance;
   DemandPredictionService._internal();
 
-  final DatabaseService _databaseService = DatabaseService();
-  final Random _random = Random();
+  final DatosService _datosService = DatosService();
 
   /// Predice la demanda para un producto específico en los próximos días
   Future<DemandPrediction> predictDemandForProduct(int productoId, int daysAhead) async {
@@ -60,7 +59,7 @@ class DemandPredictionService {
     try {
       LoggingService.info('Iniciando predicción de demanda para todos los productos');
       
-      final productos = await _databaseService.getAllProductos();
+      final productos = await _datosService.getAllProductos();
       final predictions = <DemandPrediction>[];
       
       for (final producto in productos) {
@@ -95,7 +94,7 @@ class DemandPredictionService {
       
       for (final prediction in predictions) {
         if (prediction.urgency != DemandUrgency.low && prediction.confidence > 0.6) {
-          final productos = await _databaseService.getAllProductos();
+          final productos = await _datosService.getAllProductos();
           final producto = productos.firstWhere(
             (p) => p.id == prediction.productoId,
             orElse: () => throw Exception('Producto no encontrado'),
@@ -140,7 +139,7 @@ class DemandPredictionService {
     final now = DateTime.now();
     final thirtyDaysAgo = now.subtract(const Duration(days: 30));
     
-    final ventas = await _databaseService.getVentasByDateRange(thirtyDaysAgo, now);
+    final ventas = await _datosService.getVentasByDateRange(thirtyDaysAgo, now);
     
     // Filtrar ventas que contengan el producto
     return ventas.where((venta) {

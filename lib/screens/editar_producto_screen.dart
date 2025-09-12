@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
+import '../services/datos/datos.dart';
 import '../config/app_theme.dart';
 import '../widgets/windows_button.dart';
 
@@ -20,7 +20,7 @@ class EditarProductoScreen extends StatefulWidget {
 
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   
   // Controladores para los campos
   final _nombreController = TextEditingController();
@@ -117,7 +117,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         fechaCreacion: widget.producto.fechaCreacion, // Mantener fecha original
       );
 
-      await _databaseService.updateProducto(productoActualizado);
+      await _datosService.updateProducto(productoActualizado);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

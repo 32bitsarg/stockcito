@@ -1,20 +1,20 @@
-import '../models/venta.dart';
-import '../services/database_service.dart';
-import '../services/logging_service.dart';
+import '../../models/venta.dart';
+import 'datos.dart';
+import '../../services/logging_service.dart';
 
 class TrendAnalysisService {
   static final TrendAnalysisService _instance = TrendAnalysisService._internal();
   factory TrendAnalysisService() => _instance;
   TrendAnalysisService._internal();
 
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
 
   /// Análisis de tendencias de ventas por producto
   Future<Map<String, dynamic>> analyzeProductTrends(int productoId, {int days = 30}) async {
     try {
       LoggingService.business('Iniciando análisis de tendencias para producto $productoId');
       
-      final ventas = await _databaseService.getVentasByDateRange(
+      final ventas = await _datosService.getVentasByDateRange(
         DateTime.now().subtract(Duration(days: days)),
         DateTime.now(),
       );
@@ -71,7 +71,7 @@ class TrendAnalysisService {
     try {
       LoggingService.business('Iniciando análisis de tendencias del negocio');
       
-      final ventas = await _databaseService.getVentasByDateRange(
+      final ventas = await _datosService.getVentasByDateRange(
         DateTime.now().subtract(Duration(days: days)),
         DateTime.now(),
       );
@@ -132,7 +132,7 @@ class TrendAnalysisService {
     try {
       LoggingService.business('Iniciando análisis de tendencias de inventario');
       
-      final productos = await _databaseService.getAllProductos();
+      final productos = await _datosService.getAllProductos();
 
       if (productos.isEmpty) {
         return {
@@ -273,7 +273,7 @@ class TrendAnalysisService {
 
     final ventasProducto = ventas.map((venta) => 
       venta.items.where((item) => item.productoId == productoId)
-          .fold<int>(0, (sum, item) => sum + item.cantidad)
+          .fold<int>(0, (sum, item) => sum + item.cantidad.round())
     ).toList();
 
     // Calcular pendiente usando regresión lineal simple
@@ -311,7 +311,7 @@ class TrendAnalysisService {
       final fecha = venta.fecha.toIso8601String().split('T')[0];
       final cantidad = venta.items
           .where((item) => item.productoId == productoId)
-          .fold<int>(0, (sum, item) => sum + item.cantidad);
+          .fold<int>(0, (sum, item) => sum + item.cantidad.round());
       
       ventasPorDia[fecha] = (ventasPorDia[fecha] ?? 0) + cantidad;
     }
@@ -336,7 +336,7 @@ class TrendAnalysisService {
     for (final venta in ventas) {
       for (final item in venta.items) {
         ventasPorCategoria[item.categoria] = 
-            (ventasPorCategoria[item.categoria] ?? 0) + item.cantidad;
+            (ventasPorCategoria[item.categoria] ?? 0) + item.cantidad.round();
       }
     }
     

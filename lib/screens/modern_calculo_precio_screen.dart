@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
-import '../services/dashboard_service.dart';
+import '../services/datos/datos.dart';
+import '../services/datos/dashboard_service.dart';
+import '../services/ml_persistence_service.dart';
+import '../services/ai_cache_service.dart';
 import '../config/app_theme.dart';
 import '../widgets/animated_widgets.dart';
 
@@ -20,7 +22,7 @@ class ModernCalculoPrecioScreen extends StatefulWidget {
 }
 
 class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> with TickerProviderStateMixin {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   late TabController _tabController;
 
   // Controladores para información del producto
@@ -79,6 +81,20 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
     super.initState();
     _tabController = TabController(length: 5, vsync: this);
     _materiales.add(MaterialItem(nombre: 'Tela principal', cantidad: 1, precio: 0));
+    
+    // Agregar listeners para actualizar precios automáticamente
+    _tiempoConfeccionController.addListener(_actualizarPrecios);
+    _tarifaHoraController.addListener(_actualizarPrecios);
+    _costoEquiposController.addListener(_actualizarPrecios);
+    _alquilerMensualController.addListener(_actualizarPrecios);
+    _serviciosController.addListener(_actualizarPrecios);
+    _gastosAdminController.addListener(_actualizarPrecios);
+    _productosEstimadosController.addListener(_actualizarPrecios);
+    _margenGananciaController.addListener(_actualizarPrecios);
+    _ivaController.addListener(_actualizarPrecios);
+    
+    // Cargar datos del usuario si está autenticado
+    _cargarDatosUsuario();
   }
 
   @override
@@ -103,6 +119,84 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
     _margenGananciaController.dispose();
     _ivaController.dispose();
     super.dispose();
+  }
+
+  // Función para actualizar precios automáticamente
+  void _actualizarPrecios() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  // Función para formatear números sin decimales innecesarios
+  String _formatearPrecio(double precio) {
+    if (precio == precio.roundToDouble()) {
+      return precio.round().toString();
+    } else {
+      return precio.toStringAsFixed(2);
+    }
+  }
+
+  // Función para actualizar el dashboard de forma segura
+  void _actualizarDashboard() {
+    try {
+      // Usar un Future.delayed para asegurar que la navegación termine primero
+      Future.delayed(const Duration(milliseconds: 100), () {
+        try {
+          context.read<DashboardService>().cargarDatos();
+        } catch (e) {
+          print('Error actualizando dashboard: $e');
+        }
+      });
+    } catch (e) {
+      print('Error programando actualización del dashboard: $e');
+    }
+  }
+
+  /// Carga datos del usuario desde Supabase si está autenticado
+  Future<void> _cargarDatosUsuario() async {
+    try {
+      // DatosService maneja automáticamente la sincronización
+      await _datosService.initialize();
+    } catch (e) {
+      print('Error cargando datos del usuario: $e');
+    }
+  }
+
+  void _generarDatosEntrenamientoML(Producto producto) {
+    try {
+      // Importar el servicio de ML
+      final mlPersistenceService = MLPersistenceService();
+      
+      // Generar datos de entrenamiento basados en el producto
+      final features = [
+        producto.costoMateriales,
+        producto.costoManoObra,
+        producto.gastosGenerales,
+        producto.margenGanancia,
+        producto.stock.toDouble(),
+      ];
+      
+      final target = producto.precioVenta;
+      
+      // Crear datos de entrenamiento como Map<String, dynamic>
+      final trainingData = {
+        'features': features,
+        'target': target,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      
+      // Guardar datos en Supabase
+      mlPersistenceService.saveTrainingData(trainingData);
+      
+      // Invalidar caché para que se actualicen las estadísticas
+      final cacheService = AICacheService();
+      cacheService.invalidateCache();
+      
+      print('Datos de entrenamiento ML generados para producto: ${producto.nombre}');
+    } catch (e) {
+      print('Error generando datos de entrenamiento ML: $e');
+    }
   }
 
   @override
@@ -458,7 +552,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
                                         ),
                                         const SizedBox(width: 16),
                                         Text(
-                                          'Precio: \$${material.precio.toStringAsFixed(2)}',
+                                          'Precio: \$${_formatearPrecio(material.precio)}',
                                           style: const TextStyle(
                                             fontSize: 14,
                                             color: AppTheme.textSecondary,
@@ -473,7 +567,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    '\$${(material.cantidad * material.precio).toStringAsFixed(2)}',
+                                    '\$${_formatearPrecio(material.cantidad * material.precio)}',
                                     style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
@@ -936,14 +1030,14 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Mano de Obra:'),
-                Text('\$${costoManoObra.toStringAsFixed(2)}'),
+                Text('\$${_formatearPrecio(costoManoObra)}'),
               ],
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('Equipos/Máquinas:'),
-                Text('\$${costoEquipos.toStringAsFixed(2)}'),
+                Text('\$${_formatearPrecio(costoEquipos)}'),
               ],
             ),
             const Divider(),
@@ -952,7 +1046,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
               children: [
                 const Text('Total Producción:', style: TextStyle(fontWeight: FontWeight.bold)),
                 Text(
-                  '\$${(costoManoObra + costoEquipos).toStringAsFixed(2)}',
+                  '\$${_formatearPrecio(costoManoObra + costoEquipos)}',
                   style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.successColor),
                 ),
               ],
@@ -1127,7 +1221,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
                   ),
                 ),
                 Text(
-                  '\$${(costos['costoTotal'] ?? 0).toStringAsFixed(2)}',
+                  '\$${_formatearPrecio(costos['costoTotal'] ?? 0)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -1269,7 +1363,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
           ),
           const SizedBox(height: 12),
           Text(
-            '\$${precioConIva.toStringAsFixed(2)}',
+            '\$${_formatearPrecio(precioConIva)}',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -1389,7 +1483,7 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
           ),
           const SizedBox(height: 20),
           Text(
-            '\$${precioConIva.toStringAsFixed(2)}',
+            '\$${_formatearPrecio(precioConIva)}',
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -2115,38 +2209,83 @@ class _ModernCalculoPrecioScreenState extends State<ModernCalculoPrecioScreen> w
   }
 
   Future<void> _guardarProducto() async {
-    if (_nombreController.text.isEmpty) {
+    // Validaciones
+    if (_nombreController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Por favor ingresa el nombre del producto')),
       );
       return;
     }
 
-    final costos = _calcularCostos();
-    final margen = double.tryParse(_margenGananciaController.text) ?? 50;
+    if (_categoriaSeleccionada.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona una categoría')),
+      );
+      return;
+    }
 
-    final producto = Producto(
-      nombre: _nombreController.text,
-      categoria: _categoriaSeleccionada,
-      talla: _tallaSeleccionada,
-      costoMateriales: costos['materiales']!,
-      costoManoObra: costos['manoObra']!,
-      gastosGenerales: costos['costosFijos']! + costos['equipos']!,
-      margenGanancia: margen,
-      stock: int.tryParse(_stockController.text) ?? 1,
-      fechaCreacion: DateTime.now(),
-    );
+    if (_tallaSeleccionada.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor selecciona una talla')),
+      );
+      return;
+    }
 
     try {
-      await _databaseService.insertProducto(producto);
-      
-      // Actualizar el dashboard
-      if (mounted) {
-        context.read<DashboardService>().cargarDatos();
-        Navigator.of(context).pop();
+      final costos = _calcularCostos();
+      final margen = double.tryParse(_margenGananciaController.text) ?? 50;
+      final stock = int.tryParse(_stockController.text) ?? 1;
+
+      // Validar que los costos sean válidos
+      if (costos['costoTotal']! <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Producto guardado exitosamente')),
+          const SnackBar(content: Text('El costo total debe ser mayor a 0')),
         );
+        return;
+      }
+
+      final producto = Producto(
+        nombre: _nombreController.text.trim(),
+        categoria: _categoriaSeleccionada,
+        talla: _tallaSeleccionada,
+        costoMateriales: costos['materiales']!,
+        costoManoObra: costos['manoObra']!,
+        gastosGenerales: costos['costosFijos']! + costos['equipos']!,
+        margenGanancia: margen,
+        stock: stock,
+        fechaCreacion: DateTime.now(),
+      );
+
+      // Guardar producto usando DatosService (maneja local + Supabase automáticamente)
+      final guardadoExitoso = await _datosService.saveProducto(producto);
+      
+      if (!guardadoExitoso) {
+        throw Exception('Error guardando el producto');
+      }
+      
+      // Generar datos de entrenamiento para ML
+      _generarDatosEntrenamientoML(producto);
+      
+      // Mostrar mensaje de éxito
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Producto guardado exitosamente'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Verificar si podemos hacer pop antes de intentarlo
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+          // Actualizar el dashboard después de navegar
+          _actualizarDashboard();
+        } else {
+          // Si no podemos hacer pop, limpiar el formulario
+          _nuevoCalculo();
+          // Actualizar el dashboard de todas formas
+          _actualizarDashboard();
+        }
       }
     } catch (e) {
       if (mounted) {

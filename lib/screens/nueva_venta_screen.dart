@@ -4,8 +4,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/venta.dart';
 import '../models/cliente.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
-import '../services/dashboard_service.dart';
+import '../services/datos/datos.dart';
+import '../services/datos/dashboard_service.dart';
 import '../services/error_handler_service.dart';
 import '../services/logging_service.dart';
 import '../services/notification_service.dart';
@@ -20,7 +20,7 @@ class NuevaVentaScreen extends StatefulWidget {
 }
 
 class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   final _formKey = GlobalKey<FormState>();
   
   // Controladores del formulario
@@ -61,8 +61,8 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
 
   Future<void> _loadData() async {
     try {
-      final productos = await _databaseService.getAllProductos();
-      final clientes = await _databaseService.getAllClientes();
+      final productos = await _datosService.getAllProductos();
+      final clientes = await _datosService.getAllClientes();
       
       setState(() {
         _productos = productos;
@@ -1063,7 +1063,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         items: _itemsVenta,
       );
 
-      await _databaseService.insertVenta(venta);
+      await _datosService.insertVenta(venta);
       LoggingService.business('Venta guardada exitosamente', entity: 'Venta');
       
       // Actualizar dashboard

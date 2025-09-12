@@ -1,20 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
-import 'screens/dashboard_screen.dart';
-import 'services/dashboard_service.dart';
+import 'screens/splash_screen.dart';
 import 'services/theme_service.dart';
 import 'services/theme_manager_service.dart';
 import 'services/windows_window_service.dart';
 import 'services/logging_service.dart';
 import 'services/smart_notification_service.dart';
+import 'services/supabase_auth_service.dart';
+import 'services/ml_training_service.dart';
+import 'services/datos/datos.dart';
+import 'services/datos/dashboard_service.dart';
+import 'services/data_migration_service.dart';
+import 'services/ml_consent_service.dart';
 import 'widgets/window_manager_wrapper.dart';
+import 'config/supabase_config.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Configurar logging
   LoggingService.info('Stockcito iniciando...');
+  
+  // Cargar variables de entorno
+  LoggingService.info('Cargando configuración de Supabase...');
+  await SupabaseConfig.load();
+  LoggingService.info('Configuración de Supabase cargada');
+  
+  // Inicializar Supabase Auth
+  LoggingService.info('Inicializando Supabase Auth...');
+  final authService = SupabaseAuthService();
+  await authService.initialize();
+  LoggingService.info('Supabase Auth inicializado correctamente');
+  
+  // Inicializar DatosService con dependencia de autenticación
+  LoggingService.info('Inicializando DatosService...');
+  final datosService = DatosService();
+  datosService.initializeAuthService(authService);
+  authService.initializeDatosService(datosService);
+  LoggingService.info('DatosService inicializado correctamente');
+  
+  // Inicializar MLTrainingService con dependencia de DatosService
+  LoggingService.info('Inicializando MLTrainingService...');
+  final mlTrainingService = MLTrainingService();
+  datosService.initializeMLTrainingService(mlTrainingService);
+  await mlTrainingService.initialize();
+  LoggingService.info('MLTrainingService inicializado correctamente');
+  
+  // Inicializar DataMigrationService
+  LoggingService.info('Inicializando DataMigrationService...');
+  final dataMigrationService = DataMigrationService();
+  LoggingService.info('DataMigrationService inicializado correctamente');
+  
+  // Inicializar MLConsentService
+  LoggingService.info('Inicializando MLConsentService...');
+  final mlConsentService = MLConsentService();
+  LoggingService.info('MLConsentService inicializado correctamente');
+  
+  // Configurar dependencias circulares
+  LoggingService.info('Configurando dependencias de servicios...');
+  dataMigrationService.initializeServices(
+    datosService: datosService,
+    mlTrainingService: mlTrainingService,
+    consentService: mlConsentService,
+  );
+  
+  mlConsentService.initializeServices(
+    mlTrainingService: mlTrainingService,
+    dataMigrationService: dataMigrationService,
+  );
+  
+  datosService.initializeMLConsentService(mlConsentService);
+  LoggingService.info('Dependencias de servicios configuradas correctamente');
   
   try {
     // Configurar ventana de Windows solo si es Windows
@@ -62,7 +119,7 @@ class MyApp extends StatelessWidget {
             theme: themeService.lightTheme,
             darkTheme: themeService.darkTheme,
             themeMode: themeService.themeMode,
-            home: const DashboardScreen(),
+            home: const SplashScreen(),
             debugShowCheckedModeBanner: false,
           );
           

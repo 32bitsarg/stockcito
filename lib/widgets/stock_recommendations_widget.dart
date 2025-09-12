@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:ricitosdebb/services/demand_prediction_service.dart';
+import '../services/datos/demand_prediction_service.dart';
 import 'package:ricitosdebb/services/smart_notification_service.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
 
@@ -77,7 +77,10 @@ class _StockRecommendationsWidgetState extends State<StockRecommendationsWidget>
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 80, // Altura aumentada para mejor visualización
+      constraints: const BoxConstraints(
+        minHeight: 50,
+        maxHeight: 100,
+      ),
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -87,10 +90,11 @@ class _StockRecommendationsWidgetState extends State<StockRecommendationsWidget>
           width: 1,
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Icon(
@@ -124,7 +128,8 @@ class _StockRecommendationsWidgetState extends State<StockRecommendationsWidget>
             _buildEmptyState()
           else
             _buildRecommendationsList(),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -239,111 +244,6 @@ class _StockRecommendationsWidgetState extends State<StockRecommendationsWidget>
     );
   }
 
-  Widget _buildRecommendationCard(StockRecommendation recommendation) {
-    final urgencyColor = _getUrgencyColor(recommendation.urgency);
-    final urgencyIcon = _getUrgencyIcon(recommendation.urgency);
-    
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: urgencyColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: urgencyColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header con nombre y urgencia
-          Row(
-            children: [
-              Icon(urgencyIcon, color: urgencyColor, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  recommendation.producto.nombre,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: urgencyColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  _getUrgencyText(recommendation.urgency),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: urgencyColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          // Información de stock
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStockInfo('Actual', '${recommendation.currentStock}', AppTheme.textSecondary),
-              _buildStockInfo('Recomendado', '${recommendation.recommendedStock}', urgencyColor),
-              _buildStockInfo('Demanda', '${recommendation.predictedDemand}', AppTheme.primaryColor),
-            ],
-          ),
-          const SizedBox(height: 8),
-          
-          // Razón
-          Text(
-            recommendation.reason,
-            style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 8),
-          
-          // Botones
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => _sendNotification(recommendation),
-                  icon: const Icon(FontAwesomeIcons.bell, size: 12),
-                  label: const Text('Notificar', style: TextStyle(fontSize: 12)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _showRecommendationDetails(recommendation),
-                  icon: const Icon(FontAwesomeIcons.eye, size: 12),
-                  label: const Text('Detalles', style: TextStyle(fontSize: 12)),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildStockInfo(String label, String value, Color color) {
     return Column(

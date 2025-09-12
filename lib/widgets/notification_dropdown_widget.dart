@@ -124,7 +124,9 @@ class _NotificationDropdownWidgetState extends State<NotificationDropdownWidget>
 
   @override
   void dispose() {
-    _removeOverlay();
+    // Solo remover overlay sin setState
+    _overlayEntry?.remove();
+    _overlayEntry = null;
     // Cancelar todos los timers activos
     _autoRemoveTimers.values.forEach((timer) => timer.cancel());
     _autoRemoveTimers.clear();

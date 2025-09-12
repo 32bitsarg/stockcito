@@ -3,7 +3,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
+import '../services/datos/datos.dart';
 import '../config/app_theme.dart';
 import '../widgets/windows_button.dart';
 
@@ -15,7 +15,7 @@ class ModernReportesScreen extends StatefulWidget {
 }
 
 class _ModernReportesScreenState extends State<ModernReportesScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   List<Producto> _productos = [];
   bool _isLoading = true;
   String _filtroCategoria = 'Todas';
@@ -47,7 +47,7 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
   }
 
   Future<void> _loadProductos() async {
-    final productos = await _databaseService.getAllProductos();
+    final productos = await _datosService.getProductos();
     setState(() {
       _productos = productos;
       _isLoading = false;

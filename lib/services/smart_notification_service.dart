@@ -1,8 +1,7 @@
 import 'dart:async';
-import 'package:ricitosdebb/services/demand_prediction_service.dart';
+import 'datos/demand_prediction_service.dart';
 import 'package:ricitosdebb/services/notification_service.dart';
 import 'package:ricitosdebb/services/logging_service.dart';
-import 'package:ricitosdebb/models/producto.dart';
 
 class SmartNotificationService {
   static final SmartNotificationService _instance = SmartNotificationService._internal();

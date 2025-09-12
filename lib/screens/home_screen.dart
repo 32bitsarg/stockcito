@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
+import '../services/datos/datos.dart';
 import '../config/app_theme.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/action_button.dart';
@@ -19,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   List<Producto> _productos = [];
 
   @override
@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadProductos() async {
-    final productos = await _databaseService.getAllProductos();
+    final productos = await _datosService.getAllProductos();
     setState(() {
       _productos = productos;
     });

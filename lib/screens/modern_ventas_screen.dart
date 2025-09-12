@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/venta.dart';
 import '../models/cliente.dart';
 import '../models/producto.dart';
-import '../services/database_service.dart';
+import '../services/datos/datos.dart';
 import '../config/app_theme.dart';
 import '../widgets/animated_widgets.dart';
 import 'nueva_venta_screen.dart';
@@ -15,7 +15,7 @@ class ModernVentasScreen extends StatefulWidget {
 }
 
 class _ModernVentasScreenState extends State<ModernVentasScreen> {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
   List<Venta> _ventas = [];
   List<Cliente> _clientes = [];
   List<Producto> _productos = [];
@@ -35,9 +35,9 @@ class _ModernVentasScreenState extends State<ModernVentasScreen> {
 
   Future<void> _loadData() async {
     try {
-      final ventas = await _databaseService.getAllVentas();
-      final clientes = await _databaseService.getAllClientes();
-      final productos = await _databaseService.getAllProductos();
+      final ventas = await _datosService.getVentas();
+      final clientes = await _datosService.getClientes();
+      final productos = await _datosService.getProductos();
       
       setState(() {
         _ventas = ventas;

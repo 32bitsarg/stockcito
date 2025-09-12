@@ -1,11 +1,11 @@
-import 'package:ricitosdebb/services/database_service.dart';
+import 'datos/datos.dart';
 import 'package:ricitosdebb/services/logging_service.dart';
 import 'package:ricitosdebb/models/producto.dart';
 import 'package:ricitosdebb/models/venta.dart';
 import 'dart:math';
 
 class AdvancedAIAnalysisService {
-  final DatabaseService _databaseService = DatabaseService();
+  final DatosService _datosService = DatosService();
 
   // Análisis de tendencias estacionales
   Future<SeasonalAnalysis> analyzeSeasonalTrends() async {
@@ -14,7 +14,7 @@ class AdvancedAIAnalysisService {
       
       final now = DateTime.now();
       final last30Days = now.subtract(const Duration(days: 30));
-      final ventas = await _databaseService.getVentasByDateRange(last30Days, now);
+      final ventas = await _datosService.getVentasByDateRange(last30Days, now);
       
       // Análisis por días de la semana
       final Map<int, List<Venta>> ventasPorDia = {};
@@ -64,10 +64,10 @@ class AdvancedAIAnalysisService {
     try {
       LoggingService.info('Iniciando análisis de rentabilidad de productos');
       
-      final productos = await _databaseService.getAllProductos();
+      final productos = await _datosService.getAllProductos();
       final now = DateTime.now();
       final last30Days = now.subtract(const Duration(days: 30));
-      final ventas = await _databaseService.getVentasByDateRange(last30Days, now);
+      final ventas = await _datosService.getVentasByDateRange(last30Days, now);
       
       final List<ProductProfitability> productProfits = [];
       
@@ -79,7 +79,7 @@ class AdvancedAIAnalysisService {
         
         // Calcular ingresos totales
         double ingresosTotales = 0;
-        int cantidadVendida = 0;
+        double cantidadVendida = 0;
         
         for (final venta in ventasProducto) {
           for (final item in venta.items) {
@@ -106,13 +106,13 @@ class AdvancedAIAnalysisService {
         final score = _calculateProfitabilityScore(
           margenPorcentaje, 
           velocidadVenta, 
-          cantidadVendida
+          cantidadVendida.round()
         );
         
         productProfits.add(ProductProfitability(
           producto: producto,
           totalRevenue: ingresosTotales,
-          totalSold: cantidadVendida,
+          totalSold: cantidadVendida.round(),
           profitMargin: margenPorcentaje,
           totalProfit: rentabilidadTotal,
           salesVelocity: velocidadVenta,
@@ -147,12 +147,12 @@ class AdvancedAIAnalysisService {
     try {
       LoggingService.info('Generando recomendación de precio para producto $productoId');
       
-      final productos = await _databaseService.getAllProductos();
+      final productos = await _datosService.getAllProductos();
       final producto = productos.firstWhere((p) => p.id == productoId);
       
       final now = DateTime.now();
       final last30Days = now.subtract(const Duration(days: 30));
-      final ventas = await _databaseService.getVentasByDateRange(last30Days, now);
+      final ventas = await _datosService.getVentasByDateRange(last30Days, now);
       
       // Calcular elasticidad de precio (simulada)
       final elasticidad = _calculatePriceElasticity(producto, ventas);
@@ -199,7 +199,7 @@ class AdvancedAIAnalysisService {
       
       final now = DateTime.now();
       final last60Days = now.subtract(const Duration(days: 60));
-      final ventas = await _databaseService.getVentasByDateRange(last60Days, now);
+      final ventas = await _datosService.getVentasByDateRange(last60Days, now);
       
       // Patrones por día de la semana
       final Map<int, int> patronesDia = {};
