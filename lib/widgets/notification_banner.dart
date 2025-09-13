@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_theme.dart';
-import '../services/notification_service.dart';
+import '../services/notifications/notification_service.dart';
 
 class NotificationBanner extends StatefulWidget {
   final NotificationData notification;

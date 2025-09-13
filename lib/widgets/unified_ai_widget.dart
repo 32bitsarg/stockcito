@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
 import 'package:ricitosdebb/models/ai_recommendation.dart';
-import 'package:ricitosdebb/services/local_recommendations_service.dart';
-import 'package:ricitosdebb/services/ai_insights_service.dart';
+import 'package:ricitosdebb/services/ml/local_recommendations_service.dart';
+import 'package:ricitosdebb/services/ai/ai_insights_service.dart';
 import 'package:ricitosdebb/widgets/animated_widgets.dart';
 
 /// Widget unificado que combina recomendaciones de IA y análisis avanzado

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
-import '../../../services/ai_insights_service.dart';
+import '../../../services/ai/ai_insights_service.dart';
 import '../../../services/datos/smart_alerts_service.dart';
 import '../../../widgets/simple_recommendations_widget.dart';
 import '../../../widgets/ml_customer_analysis_widget.dart';

@@ -6,10 +6,10 @@ import '../widgets/metric_card.dart';
 import '../widgets/action_button.dart';
 import '../widgets/windows_app_bar.dart';
 import '../widgets/windows_button.dart';
-import 'modern_calculo_precio_screen.dart';
+import 'calcularprecios_screen/modern_calculo_precio_screen.dart';
 import 'inventario_screen/modern_inventario_screen.dart';
-import 'modern_reportes_screen.dart';
-import 'modern_configuracion_screen.dart';
+import 'reportes_screen/modern_reportes_screen.dart';
+import 'configuracion_screen/modern_configuracion_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../config/app_theme.dart';
-import '../../services/supabase_auth_service.dart';
-import '../../services/auth_error_handler.dart';
-import '../../services/consent_manager_service.dart';
+import '../../services/auth/supabase_auth_service.dart';
+import '../../services/auth/auth_error_handler.dart';
+import '../../services/system/consent_manager_service.dart';
 import 'register_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 

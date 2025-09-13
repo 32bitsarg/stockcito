@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
-import '../services/supabase_auth_service.dart';
-import '../services/consent_manager_service.dart';
+import '../services/auth/supabase_auth_service.dart';
+import '../services/system/consent_manager_service.dart';
 import 'auth/login_screen.dart';
 import 'dashboard/dashboard_screen.dart';
 

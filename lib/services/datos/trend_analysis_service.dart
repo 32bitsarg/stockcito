@@ -1,6 +1,6 @@
 import '../../models/venta.dart';
 import 'datos.dart';
-import '../../services/logging_service.dart';
+import '../../services/system/logging_service.dart';
 
 class TrendAnalysisService {
   static final TrendAnalysisService _instance = TrendAnalysisService._internal();

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/performance_service.dart';
+import 'package:ricitosdebb/services/system/performance_service.dart';
 
 void main() {
   group('PerformanceService', () {

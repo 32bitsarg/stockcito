@@ -1,8 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../supabase_auth_service.dart';
-import '../logging_service.dart';
+import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 /// Servicio de sincronización robusta con manejo de errores y reintentos
 class SyncService {

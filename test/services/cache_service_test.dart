@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/cache_service.dart';
+import 'package:ricitosdebb/services/system/cache_service.dart';
 
 void main() {
   group('CacheService', () {

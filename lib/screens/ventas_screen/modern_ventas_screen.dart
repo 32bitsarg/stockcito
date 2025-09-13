@@ -3,7 +3,7 @@ import '../../config/app_theme.dart';
 import '../../services/datos/datos.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
-import '../../screens/nueva_venta_screen.dart';
+import '../../screens/ventas_screen/widgets/nueva_venta/nueva_venta_screen.dart';
 import 'widgets/ventas_header_widget.dart';
 import 'widgets/ventas_filters_widget.dart';
 import 'widgets/ventas_metrics_widget.dart';

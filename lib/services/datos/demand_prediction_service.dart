@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:ricitosdebb/models/producto.dart';
 import 'package:ricitosdebb/models/venta.dart';
 import 'datos.dart';
-import 'package:ricitosdebb/services/logging_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 class DemandPredictionService {
   static final DemandPredictionService _instance = DemandPredictionService._internal();

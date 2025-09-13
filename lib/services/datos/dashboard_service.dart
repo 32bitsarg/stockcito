@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import 'datos.dart';
-import '../logging_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 class DashboardService extends ChangeNotifier {
   // Constructor que carga datos automáticamente

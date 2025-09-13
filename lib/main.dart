@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'screens/splash_screen.dart';
-import 'services/theme_service.dart';
-import 'services/theme_manager_service.dart';
-import 'services/windows_window_service.dart';
-import 'services/logging_service.dart';
-import 'services/smart_notification_service.dart';
-import 'services/supabase_auth_service.dart';
-import 'services/ml_training_service.dart';
+import 'services/ui/theme_service.dart';
+import 'services/ui/theme_manager_service.dart';
+import 'services/ui/windows_window_service.dart';
+import 'services/system/logging_service.dart';
+import 'services/notifications/smart_notification_service.dart';
+import 'services/auth/supabase_auth_service.dart';
+import 'services/ml/ml_training_service.dart';
 import 'services/datos/datos.dart';
 import 'services/datos/dashboard_service.dart';
-import 'services/data_migration_service.dart';
-import 'services/ml_consent_service.dart';
+import 'services/system/data_migration_service.dart';
+import 'services/ml/ml_consent_service.dart';
 import 'widgets/window_manager_wrapper.dart';
 import 'config/supabase_config.dart';
 
@@ -38,6 +38,10 @@ void main() async {
   final datosService = DatosService();
   datosService.initializeAuthService(authService);
   authService.initializeDatosService(datosService);
+  
+  // Inicializar datos de prueba si la base de datos está vacía
+  await datosService.initializeSampleDataIfEmpty();
+  
   LoggingService.info('DatosService inicializado correctamente');
   
   // Inicializar MLTrainingService con dependencia de DatosService

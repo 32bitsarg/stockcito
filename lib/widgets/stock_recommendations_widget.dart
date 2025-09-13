@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../services/datos/demand_prediction_service.dart';
-import 'package:ricitosdebb/services/smart_notification_service.dart';
+import 'package:ricitosdebb/services/notifications/smart_notification_service.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
 
 class StockRecommendationsWidget extends StatefulWidget {
