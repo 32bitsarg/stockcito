@@ -57,7 +57,7 @@ class LocalDatabaseService {
 
       return await openDatabase(
         path,
-        version: 2,
+        version: 3,
         onCreate: _createTables,
         onUpgrade: _upgradeDatabase,
       );
@@ -73,6 +73,7 @@ class LocalDatabaseService {
       await db.execute('''
         CREATE TABLE productos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
           nombre TEXT NOT NULL,
           categoria TEXT NOT NULL,
           talla TEXT NOT NULL,
@@ -89,6 +90,7 @@ class LocalDatabaseService {
       await db.execute('''
         CREATE TABLE clientes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
           nombre TEXT NOT NULL,
           telefono TEXT,
           email TEXT,
@@ -102,6 +104,7 @@ class LocalDatabaseService {
       await db.execute('''
         CREATE TABLE ventas (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
           cliente TEXT NOT NULL,
           telefono TEXT,
           email TEXT,
@@ -117,6 +120,7 @@ class LocalDatabaseService {
       await db.execute('''
         CREATE TABLE detalles_venta (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
           venta_id INTEGER NOT NULL,
           producto_id INTEGER NOT NULL,
           cantidad INTEGER NOT NULL,
@@ -200,15 +204,69 @@ class LocalDatabaseService {
         LoggingService.info('Tabla ventas recreada desde cero');
       }
     }
+    
+    if (oldVersion < 3) {
+      // Migración de versión 2 a 3 - Agregar user_id a todas las tablas
+      LoggingService.info('Ejecutando migración de base de datos de v2 a v3 - Agregando user_id');
+      
+      try {
+        // Agregar columna user_id a productos
+        await db.execute('ALTER TABLE productos ADD COLUMN user_id TEXT');
+        await db.execute('UPDATE productos SET user_id = "default" WHERE user_id IS NULL');
+        
+        // Agregar columna user_id a clientes
+        await db.execute('ALTER TABLE clientes ADD COLUMN user_id TEXT');
+        await db.execute('UPDATE clientes SET user_id = "default" WHERE user_id IS NULL');
+        
+        // Agregar columna user_id a ventas
+        await db.execute('ALTER TABLE ventas ADD COLUMN user_id TEXT');
+        await db.execute('UPDATE ventas SET user_id = "default" WHERE user_id IS NULL');
+        
+        // Agregar columna user_id a detalles_venta
+        await db.execute('ALTER TABLE detalles_venta ADD COLUMN user_id TEXT');
+        await db.execute('UPDATE detalles_venta SET user_id = "default" WHERE user_id IS NULL');
+        
+        LoggingService.info('Migración de base de datos v2 a v3 completada');
+      } catch (e) {
+        LoggingService.error('Error en migración v2 a v3: $e');
+        // Si falla, recrear las tablas con la nueva estructura
+        await _recreateTablesWithUserId(db);
+      }
+    }
+  }
+  
+  /// Recrea las tablas con user_id si la migración falla
+  Future<void> _recreateTablesWithUserId(Database db) async {
+    try {
+      LoggingService.info('Recreando tablas con user_id...');
+      
+      // Eliminar tablas existentes
+      await db.execute('DROP TABLE IF EXISTS detalles_venta');
+      await db.execute('DROP TABLE IF EXISTS ventas');
+      await db.execute('DROP TABLE IF EXISTS clientes');
+      await db.execute('DROP TABLE IF EXISTS productos');
+      
+      // Recrear con la nueva estructura
+      await _createTables(db, 3);
+      
+      LoggingService.info('Tablas recreadas con user_id exitosamente');
+    } catch (e) {
+      LoggingService.error('Error recreando tablas: $e');
+      rethrow;
+    }
   }
 
   // ==================== PRODUCTOS ====================
 
-  /// Obtiene todos los productos
-  Future<List<Producto>> getAllProductos() async {
+  /// Obtiene todos los productos para un usuario específico
+  Future<List<Producto>> getAllProductos({String? userId}) async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
-      final List<Map<String, dynamic>> maps = await db.query('productos');
+      final List<Map<String, dynamic>> maps = await db.query(
+        'productos',
+        where: userId != null ? 'user_id = ?' : null,
+        whereArgs: userId != null ? [userId] : null,
+      );
       return List.generate(maps.length, (i) => Producto.fromMap(maps[i]));
     }, 'getAllProductos');
   }
@@ -230,10 +288,14 @@ class LocalDatabaseService {
   }
 
   /// Inserta un nuevo producto
-  Future<int> insertProducto(Producto producto) async {
+  Future<int> insertProducto(Producto producto, {String? userId}) async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
-      return await db.insert('productos', producto.toMap());
+      final productMap = producto.toMap();
+      if (userId != null) {
+        productMap['user_id'] = userId;
+      }
+      return await db.insert('productos', productMap);
     }, 'insertProducto');
   }
 
