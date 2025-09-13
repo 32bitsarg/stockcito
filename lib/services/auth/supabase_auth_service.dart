@@ -1,10 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:ricitosdebb/config/supabase_config.dart';
 import 'package:ricitosdebb/services/system/logging_service.dart';
 import 'package:ricitosdebb/services/datos/datos.dart';
+import 'package:ricitosdebb/services/auth/security_service.dart';
+import 'package:ricitosdebb/services/auth/password_validation_service.dart';
 
 /// Servicio de autenticación con Supabase
 class SupabaseAuthService {
@@ -13,9 +14,6 @@ class SupabaseAuthService {
   SupabaseAuthService._internal();
 
   DatosService? _datosService;
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
   
   User? get currentUser => Supabase.instance.client.auth.currentUser;
   String? get currentUserId => currentUser?.id;
@@ -34,7 +32,7 @@ class SupabaseAuthService {
   /// Inicializa el servicio de autenticación
   Future<void> initialize() async {
     try {
-      LoggingService.info('Inicializando SupabaseAuthService...');
+      LoggingService.info('Inicializando servicio de autenticación...');
       
       // Inicializar Supabase
       await Supabase.initialize(
@@ -45,10 +43,9 @@ class SupabaseAuthService {
       // Configurar listener de cambios de autenticación
       Supabase.instance.client.auth.onAuthStateChange.listen((data) {
         final AuthChangeEvent event = data.event;
-        final Session? session = data.session;
         
-        if (event == AuthChangeEvent.signedIn && session != null) {
-          LoggingService.info('Usuario autenticado: ${session.user.email ?? "Anónimo"}');
+        if (event == AuthChangeEvent.signedIn) {
+          LoggingService.info('Usuario autenticado correctamente');
         } else if (event == AuthChangeEvent.signedOut) {
           LoggingService.info('Usuario desconectado');
         }
@@ -57,30 +54,43 @@ class SupabaseAuthService {
       // Intentar restaurar sesión anónima existente o crear una nueva
       await _ensureAnonymousSession();
       
-      LoggingService.info('SupabaseAuthService inicializado correctamente');
+      LoggingService.info('Servicio de autenticación inicializado correctamente');
     } catch (e) {
-      LoggingService.error('Error inicializando SupabaseAuthService: $e');
+      LoggingService.error('Error inicializando servicio de autenticación: $e');
     }
   }
 
   /// Inicia sesión con email y contraseña
   Future<bool> signInWithEmailAndPassword(String email, String password) async {
     try {
-      LoggingService.info('Iniciando sesión con email: $email');
+      // Verificar si el usuario está bloqueado
+      if (await SecurityService().isUserBlocked()) {
+        LoggingService.warning('Usuario bloqueado por demasiados intentos');
+        return false;
+      }
+      
+      // Sanitizar entrada
+      final cleanEmail = SecurityService().sanitizeInput(email);
+      
+      LoggingService.info('Iniciando sesión con email');
       
       final AuthResponse response = await Supabase.instance.client.auth.signInWithPassword(
-        email: email,
+        email: cleanEmail,
         password: password,
       );
       
       if (response.user != null) {
-        await _saveAuthState('email', email);
+        // Limpiar intentos fallidos en login exitoso
+        await SecurityService().clearFailedLoginAttempts();
+        await _saveAuthState('email', cleanEmail);
         LoggingService.info('Sesión iniciada correctamente');
         return true;
       }
       
       return false;
     } catch (e) {
+      // Registrar intento fallido
+      await SecurityService().recordFailedLoginAttempt();
       LoggingService.error('Error iniciando sesión: $e');
       return false;
     }
@@ -93,23 +103,33 @@ class SupabaseAuthService {
     String displayName
   ) async {
     try {
-      LoggingService.info('Creando cuenta con email: $email');
+      // Validar contraseña robusta
+      final passwordValidation = PasswordValidationService.validatePassword(password);
+      if (!passwordValidation.isValid) {
+        throw Exception(passwordValidation.errors.first);
+      }
+      
+      // Sanitizar entradas
+      final cleanEmail = SecurityService().sanitizeInput(email);
+      final cleanName = SecurityService().sanitizeInput(displayName);
+      
+      LoggingService.info('Creando cuenta con email');
       
       final AuthResponse response = await Supabase.instance.client.auth.signUp(
-        email: email,
+        email: cleanEmail,
         password: password,
         data: {
-          'full_name': displayName,
+          'full_name': cleanName,
         },
       );
       
       if (response.user != null) {
-        await _saveAuthState('email', email);
+        await _saveAuthState('email', cleanEmail);
         LoggingService.info('Cuenta creada correctamente');
         return true;
       }
       
-      LoggingService.error('Error: Usuario no creado - ${response.session}');
+      LoggingService.error('Error: Usuario no creado');
       return false;
     } catch (e) {
       LoggingService.error('Error creando cuenta: $e');
@@ -121,7 +141,7 @@ class SupabaseAuthService {
   /// Inicia sesión anónima usando Supabase nativo
   Future<bool> signInAnonymously() async {
     try {
-      LoggingService.info('Iniciando sesión anónima con Supabase');
+      LoggingService.info('Iniciando sesión anónima');
       
       // Verificar si ya hay una sesión anónima activa
       final currentSession = Supabase.instance.client.auth.currentSession;
@@ -134,11 +154,12 @@ class SupabaseAuthService {
       final AuthResponse response = await Supabase.instance.client.auth.signInAnonymously();
       
       if (response.user != null) {
-        LoggingService.info('Sesión anónima iniciada correctamente con Supabase');
+        await _saveAuthState('anonymous', 'anonymous');
+        LoggingService.info('Sesión anónima iniciada correctamente');
         return true;
       }
       
-      LoggingService.error('Error: Usuario anónimo no creado - ${response.session}');
+      LoggingService.error('Error: Usuario anónimo no creado');
       return false;
     } catch (e) {
       LoggingService.error('Error iniciando sesión anónima: $e');
@@ -146,40 +167,10 @@ class SupabaseAuthService {
     }
   }
 
-  /// Inicia sesión con Google
+  /// Inicia sesión con Google (temporalmente deshabilitado)
   Future<bool> signInWithGoogle() async {
-    try {
-      LoggingService.info('Iniciando sesión con Google');
-      
-      // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        // User cancelled the login
-        return false;
-      }
-
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      // Sign in to Supabase with the Google credential
-      final AuthResponse response = await Supabase.instance.client.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: googleAuth.idToken!,
-        accessToken: googleAuth.accessToken,
-      );
-      
-      if (response.user != null) {
-        await _saveAuthState('google', googleUser.email);
-        LoggingService.info('Sesión con Google iniciada correctamente');
-        return true;
-      }
-      
-      return false;
-    } catch (e) {
-      LoggingService.error('Error iniciando sesión con Google: $e');
-      return false;
-    }
+    LoggingService.info('Login con Google temporalmente deshabilitado');
+    return false;
   }
 
   /// Cierra la sesión actual
@@ -200,11 +191,10 @@ class SupabaseAuthService {
         LoggingService.info('Manteniendo sesión anónima activa');
       }
       
-      // Cerrar sesión en Google si está activa
-      if (await _googleSignIn.isSignedIn()) {
-        await _googleSignIn.signOut();
-      }
+      // Google Sign-In temporalmente deshabilitado
       
+      // Limpiar estado de seguridad
+      await SecurityService().clearFailedLoginAttempts();
       await _clearAuthState();
       LoggingService.info('Sesión cerrada correctamente');
     } catch (e) {
@@ -385,14 +375,18 @@ class SupabaseAuthService {
     try {
       // Verificar si ya hay una sesión activa
       final currentSession = Supabase.instance.client.auth.currentSession;
-      if (currentSession != null) {
-        LoggingService.info('Sesión existente encontrada: ${currentSession.user.isAnonymous ? "Anónima" : "Autenticada"}');
+      if (currentSession?.user.isAnonymous == true) {
+        LoggingService.info('Sesión anónima ya activa');
         return;
       }
 
-      // Crear nueva sesión anónima
-      LoggingService.info('Creando nueva sesión anónima...');
-      await signInAnonymously();
+      // Crear nueva sesión anónima usando Supabase nativo
+      final AuthResponse response = await Supabase.instance.client.auth.signInAnonymously();
+      
+      if (response.user != null) {
+        await _saveAuthState('anonymous', 'anonymous');
+        LoggingService.info('Sesión anónima creada correctamente');
+      }
     } catch (e) {
       LoggingService.error('Error asegurando sesión anónima: $e');
     }

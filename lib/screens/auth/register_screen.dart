@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../services/auth/supabase_auth_service.dart';
 import '../../services/auth/auth_error_handler.dart';
 import '../../services/system/consent_manager_service.dart';
+import '../../widgets/password_requirements_validator.dart';
 import 'login_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -29,6 +29,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _errorMessage;
 
   @override
+  void initState() {
+    super.initState();
+    
+    // Agregar listener para actualizar el indicador de fortaleza
+    _passwordController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
@@ -44,16 +54,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final confirmPassword = _confirmPasswordController.text;
     final name = _nameController.text.trim();
     
-    // Validar email
-    if (!AuthErrorHandler.isValidEmail(email)) {
+    // Validar email con seguridad
+    final emailError = AuthErrorHandler.validateEmailSecure(email);
+    if (emailError != null) {
       setState(() {
-        _errorMessage = 'El formato del email no es válido. Usa: usuario@ejemplo.com';
+        _errorMessage = emailError;
       });
       return;
     }
     
-    // Validar contraseña
-    final passwordError = AuthErrorHandler.validatePassword(password);
+    // Validar contraseña con seguridad
+    final passwordError = AuthErrorHandler.validatePasswordSecure(password);
     if (passwordError != null) {
       setState(() {
         _errorMessage = passwordError;
@@ -117,36 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      final success = await _authService.signInWithGoogle();
-      
-      if (success && mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
-      } else {
-        setState(() {
-          _errorMessage = 'Error al iniciar sesión con Google';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Error al iniciar sesión con Google: ${e.toString()}';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  // Google Sign-In temporalmente deshabilitado
 
   String _getErrorMessage(String error) {
     return AuthErrorHandler.getErrorMessage(error);
@@ -184,24 +166,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
             final needsCompression = totalContentHeight > availableContentHeight;
             final dynamicSpacing = needsCompression ? 8.0 : 16.0;
             
-            return Center(
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                padding: EdgeInsets.all(padding),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            return Container(
+              width: double.infinity,
+              height: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: padding * 0.3, vertical: padding),
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header compacto
-                    _buildCompactHeader(logoSize, titleSize, subtitleSize),
-                    SizedBox(height: dynamicSpacing),
+                    // Header animado a la izquierda
+                    SizedBox(
+                      width: 350,
+                      child: _buildAnimatedHeader(logoSize, titleSize, subtitleSize),
+                    ),
                     
-                    // Formulario compacto
-                    _buildCompactRegisterForm(isVerySmall),
-                    SizedBox(height: dynamicSpacing),
+                    // Espacio entre secciones
+                    const SizedBox(width: 40),
                     
-                    // Enlaces compactos
-                    _buildCompactLoginLink(isVerySmall),
+                    // Formulario a la derecha
+                    SizedBox(
+                      width: 400,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildCompactRegisterForm(isVerySmall),
+                          SizedBox(height: dynamicSpacing),
+                          _buildCompactLoginLink(isVerySmall),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -212,60 +205,166 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
+  Widget _buildAnimatedHeader(double logoSize, double titleSize, double subtitleSize) {
+    return TweenAnimationBuilder<double>(
+      duration: const Duration(milliseconds: 1000),
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(-50 * (1 - value), 0),
+          child: Opacity(
+            opacity: value,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Logo animado más grande
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1200),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, logoValue, child) {
+                    return Transform.scale(
+                      scale: 0.8 + (0.2 * logoValue),
+                      child: Transform.rotate(
+                        angle: (1 - logoValue) * 0.5,
+                        child: Container(
+                          width: logoSize * 2,
+                          height: logoSize * 2,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryColor.withOpacity(0.3 * logoValue),
+                                blurRadius: 30 * logoValue,
+                                offset: const Offset(0, 12),
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'S',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                    },
+                  ),
+                  SizedBox(height: 20 * value),
+                  
+                  // Título animado más grande
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1400),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, titleValue, child) {
+                      return Transform.translate(
+                        offset: Offset(-30 * (1 - titleValue), 0),
+                        child: Opacity(
+                          opacity: titleValue,
+                          child: Text(
+                            'Stockcito',
+                            style: TextStyle(
+                              fontSize: titleSize * 1.5,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 8 * value),
+                  
+                  // Subtítulo animado más grande
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1600),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, subtitleValue, child) {
+                      return Transform.translate(
+                        offset: Offset(-20 * (1 - subtitleValue), 0),
+                        child: Opacity(
+                          opacity: subtitleValue,
+                          child: Text(
+                            'Gestiona tu inventario\nde manera inteligente',
+                            style: TextStyle(
+                              fontSize: subtitleSize * 1.2,
+                              color: AppTheme.textSecondary,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  SizedBox(height: 24 * value),
+                  
+                  // Características adicionales
+                  TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1800),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    builder: (context, featuresValue, child) {
+                      return Transform.translate(
+                        offset: Offset(-15 * (1 - featuresValue), 0),
+                        child: Opacity(
+                          opacity: featuresValue,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildFeatureItem(Icons.analytics, 'Control total de inventario'),
+                              const SizedBox(height: 8),
+                              _buildFeatureItem(Icons.psychology, 'Análisis inteligente con IA'),
+                              const SizedBox(height: 8),
+                              _buildFeatureItem(Icons.devices, 'Acceso desde cualquier dispositivo'),
+                              const SizedBox(height: 8),
+                              _buildFeatureItem(Icons.security, 'Datos seguros y encriptados'),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Row(
       children: [
-        // Logo cuadrado con S
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primaryColor.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: const Center(
-            child: Text(
-              'S',
-              style: TextStyle(
-                fontSize: 36,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
+        Icon(
+          icon,
+          size: 20,
+          color: AppTheme.primaryColor,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(width: 12),
         Text(
-          'Crear Cuenta',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Únete a Stockcito y gestiona tu negocio',
+          text,
           style: TextStyle(
             fontSize: 16,
             color: AppTheme.textSecondary,
+            fontWeight: FontWeight.w500,
           ),
-          textAlign: TextAlign.center,
         ),
       ],
     );
   }
+
 
   Widget _buildRegisterForm() {
     return Container(
@@ -394,7 +493,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             
             // Campo de confirmar contraseña
             TextFormField(
@@ -519,32 +618,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ],
             ),
             
-            const SizedBox(height: 16),
-            
-            // Botón de Google Sign-In
-            OutlinedButton.icon(
-              onPressed: _isLoading ? null : _signInWithGoogle,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.textPrimary,
-                side: BorderSide(color: AppTheme.borderColor),
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              icon: const FaIcon(
-                FontAwesomeIcons.google,
-                size: 20,
-                color: Colors.red,
-              ),
-              label: const Text(
-                'Continuar con Google',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+            // Google Sign-In temporalmente deshabilitado
             
             const SizedBox(height: 20),
             
@@ -795,6 +869,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 }
                 return null;
               },
+            ),
+            SizedBox(height: isVerySmall ? 12 : 16),
+            
+            // Validador de requisitos de contraseña
+            PasswordRequirementsValidator(
+              password: _passwordController.text,
+              showSuggestions: true,
             ),
             SizedBox(height: isVerySmall ? 12 : 16),
             
