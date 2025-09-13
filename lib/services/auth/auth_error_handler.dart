@@ -1,3 +1,6 @@
+import 'package:ricitosdebb/services/auth/password_validation_service.dart';
+import 'package:ricitosdebb/services/auth/security_service.dart';
+
 /// Manejador centralizado de errores de autenticación
 /// Proporciona mensajes de error amigables para el usuario
 class AuthErrorHandler {
@@ -74,23 +77,15 @@ class AuthErrorHandler {
     return emailRegex.hasMatch(email);
   }
   
-  /// Valida la fortaleza de la contraseña
+  /// Valida la fortaleza de la contraseña usando el servicio robusto
   static String? validatePassword(String password) {
-    if (password.length < 6) {
-      return 'La contraseña debe tener al menos 6 caracteres';
-    }
-    if (password.length > 72) {
-      return 'La contraseña no puede tener más de 72 caracteres';
-    }
-    return null;
+    final validation = PasswordValidationService.validatePassword(password);
+    return validation.isValid ? null : validation.errors.first;
   }
   
   /// Valida que las contraseñas coincidan
   static String? validatePasswordMatch(String password, String confirmPassword) {
-    if (password != confirmPassword) {
-      return 'Las contraseñas no coinciden';
-    }
-    return null;
+    return PasswordValidationService.validatePasswordMatch(password, confirmPassword);
   }
   
   /// Valida el nombre completo
@@ -109,24 +104,29 @@ class AuthErrorHandler {
   
   /// Obtiene sugerencias para mejorar la contraseña
   static List<String> getPasswordSuggestions(String password) {
-    List<String> suggestions = [];
-    
-    if (password.length < 8) {
-      suggestions.add('Usa al menos 8 caracteres');
-    }
-    if (!password.contains(RegExp(r'[A-Z]'))) {
-      suggestions.add('Incluye al menos una letra mayúscula');
-    }
-    if (!password.contains(RegExp(r'[a-z]'))) {
-      suggestions.add('Incluye al menos una letra minúscula');
-    }
-    if (!password.contains(RegExp(r'[0-9]'))) {
-      suggestions.add('Incluye al menos un número');
-    }
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      suggestions.add('Incluye al menos un símbolo especial');
+    final validation = PasswordValidationService.validatePassword(password);
+    return validation.suggestions;
+  }
+  
+  /// Valida email con seguridad adicional
+  static String? validateEmailSecure(String email) {
+    if (!isValidEmail(email)) {
+      return 'El formato del email no es válido';
     }
     
-    return suggestions;
+    if (SecurityService().isEmailBlacklisted(email)) {
+      return 'Este tipo de email no está permitido';
+    }
+    
+    return null;
+  }
+  
+  /// Valida contraseña con seguridad adicional
+  static String? validatePasswordSecure(String password) {
+    if (SecurityService().isPasswordCommon(password)) {
+      return 'Esta contraseña es muy común. Elige una más segura';
+    }
+    
+    return validatePassword(password);
   }
 }
