@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import '../services/windows_window_service.dart';
+import '../services/ui/windows_window_service.dart';
 
 class WindowManagerWrapper extends StatefulWidget {
   final Widget child;

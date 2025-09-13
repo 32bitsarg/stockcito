@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/logging_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 void main() {
   group('LoggingService', () {

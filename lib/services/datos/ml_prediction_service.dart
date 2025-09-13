@@ -1,6 +1,6 @@
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'datos.dart';
-import 'package:ricitosdebb/services/logging_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 import 'package:ricitosdebb/models/producto.dart';
 import 'package:ricitosdebb/models/venta.dart';
 

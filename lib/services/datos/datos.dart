@@ -1,9 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../supabase_auth_service.dart';
-import '../logging_service.dart';
-import '../ml_training_service.dart';
-import '../ml_consent_service.dart';
+import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:ricitosdebb/services/ml/ml_training_service.dart';
+import 'package:ricitosdebb/services/ml/ml_consent_service.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
@@ -33,6 +33,22 @@ class DatosService {
   /// Inicializa el servicio de consentimiento ML (inyección de dependencia)
   void initializeMLConsentService(MLConsentService consentService) {
     _consentService = consentService;
+  }
+
+  /// Inicializa datos de prueba si la base de datos está vacía
+  Future<void> initializeSampleDataIfEmpty() async {
+    try {
+      final productos = await getProductos();
+      if (productos.isEmpty) {
+        LoggingService.info('Base de datos vacía, inicializando datos de prueba...');
+        await _localDb.initializeSampleData();
+        LoggingService.info('Datos de prueba inicializados correctamente');
+      } else {
+        LoggingService.info('Base de datos ya contiene datos, saltando inicialización de datos de prueba');
+      }
+    } catch (e) {
+      LoggingService.error('Error inicializando datos de prueba: $e');
+    }
   }
 
   /// Entrena la IA solo si el usuario ha dado consentimiento
@@ -139,6 +155,8 @@ class DatosService {
   Future<List<Producto>> getProductos({int page = 0, int limit = _maxItemsPerPage}) async {
     try {
       final userId = _currentUserId;
+      LoggingService.info('DEBUG: getProductos - userId: $userId, isSignedIn: $_isSignedIn, isAnonymous: $_isAnonymous');
+      
       if (userId == null) {
         LoggingService.warning('Usuario no autenticado intentando obtener productos');
         return [];
@@ -146,6 +164,7 @@ class DatosService {
 
       // Validar acceso del usuario
       if (!await _validateUserAccess(userId, 'get_productos')) {
+        LoggingService.warning('DEBUG: Acceso denegado para get_productos');
         return [];
       }
 

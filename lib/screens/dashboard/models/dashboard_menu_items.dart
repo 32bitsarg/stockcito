@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
-import '../../modern_calculo_precio_screen.dart';
+import '../../calcularprecios_screen/modern_calculo_precio_screen.dart';
 import '../../inventario_screen/modern_inventario_screen.dart';
-import '../../modern_reportes_screen.dart';
-import '../../modern_ventas_screen.dart';
-import '../../gestión_clientes_screen.dart';
-import '../../modern_configuracion_screen.dart';
+import '../../reportes_screen/modern_reportes_screen.dart';
+import '../../ventas_screen/modern_ventas_screen.dart';
+import '../../clientes_screen/gestión_clientes_screen.dart';
+import '../../configuracion_screen/modern_configuracion_screen.dart';
 
 class DashboardMenuItems {
   static const List<Map<String, dynamic>> _menuItems = [

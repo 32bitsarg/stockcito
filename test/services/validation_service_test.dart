@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/validation_service.dart';
+import 'package:ricitosdebb/services/system/validation_service.dart';
 
 void main() {
   group('ValidationService', () {

@@ -4,7 +4,7 @@ import 'dart:io';
 import '../../../models/producto.dart';
 import '../../../models/venta.dart';
 import '../../../models/cliente.dart';
-import '../../logging_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 /// Servicio para manejo de base de datos local SQLite
 class LocalDatabaseService {
@@ -418,6 +418,126 @@ class LocalDatabaseService {
       
       return result;
     }, 'getVentasUltimos7Dias');
+  }
+
+  /// Inicializa datos de prueba para desarrollo
+  Future<void> initializeSampleData() async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      
+      // Verificar si ya hay datos
+      final productosCount = await db.rawQuery('SELECT COUNT(*) as count FROM productos');
+      if (productosCount.first['count'] as int > 0) {
+        LoggingService.info('Ya hay datos en la base de datos, saltando inicialización de datos de prueba');
+        return;
+      }
+      
+      LoggingService.info('Inicializando datos de prueba...');
+      
+      // Insertar productos de ejemplo
+      final productosEjemplo = [
+        {
+          'nombre': 'Camiseta Básica Blanca',
+          'categoria': 'Ropa',
+          'talla': 'M',
+          'precio': 25.99,
+          'stock': 15,
+          'costo_materiales': 8.50,
+          'costo_mano_obra': 5.00,
+          'gastos_generales': 2.00,
+          'margen_ganancia': 0.40,
+          'fecha_creacion': DateTime.now().toIso8601String(),
+          'descripcion': 'Camiseta básica de algodón 100%',
+          'codigo': 'CAM-001'
+        },
+        {
+          'nombre': 'Pantalón Jeans Azul',
+          'categoria': 'Ropa',
+          'talla': 'L',
+          'precio': 45.99,
+          'stock': 8,
+          'costo_materiales': 18.00,
+          'costo_mano_obra': 8.00,
+          'gastos_generales': 4.00,
+          'margen_ganancia': 0.35,
+          'fecha_creacion': DateTime.now().toIso8601String(),
+          'descripcion': 'Pantalón jeans clásico',
+          'codigo': 'PAN-001'
+        },
+        {
+          'nombre': 'Zapatillas Deportivas',
+          'categoria': 'Calzado',
+          'talla': '42',
+          'precio': 89.99,
+          'stock': 3,
+          'costo_materiales': 35.00,
+          'costo_mano_obra': 15.00,
+          'gastos_generales': 8.00,
+          'margen_ganancia': 0.36,
+          'fecha_creacion': DateTime.now().toIso8601String(),
+          'descripcion': 'Zapatillas deportivas cómodas',
+          'codigo': 'ZAP-001'
+        },
+        {
+          'nombre': 'Gorra de Béisbol',
+          'categoria': 'Accesorios',
+          'talla': 'Única',
+          'precio': 19.99,
+          'stock': 25,
+          'costo_materiales': 6.00,
+          'costo_mano_obra': 3.00,
+          'gastos_generales': 1.50,
+          'margen_ganancia': 0.48,
+          'fecha_creacion': DateTime.now().toIso8601String(),
+          'descripcion': 'Gorra de béisbol ajustable',
+          'codigo': 'GOR-001'
+        },
+        {
+          'nombre': 'Chaqueta de Cuero',
+          'categoria': 'Ropa',
+          'talla': 'XL',
+          'precio': 199.99,
+          'stock': 2,
+          'costo_materiales': 80.00,
+          'costo_mano_obra': 25.00,
+          'gastos_generales': 15.00,
+          'margen_ganancia': 0.40,
+          'fecha_creacion': DateTime.now().toIso8601String(),
+          'descripcion': 'Chaqueta de cuero genuino',
+          'codigo': 'CHA-001'
+        }
+      ];
+      
+      for (final producto in productosEjemplo) {
+        await db.insert('productos', producto);
+      }
+      
+      // Insertar clientes de ejemplo
+      final clientesEjemplo = [
+        {
+          'nombre': 'Juan Pérez',
+          'email': 'juan.perez@email.com',
+          'telefono': '+1234567890',
+          'direccion': 'Calle Principal 123',
+          'fecha_registro': DateTime.now().toIso8601String(),
+          'notas': 'Cliente frecuente'
+        },
+        {
+          'nombre': 'María García',
+          'email': 'maria.garcia@email.com',
+          'telefono': '+0987654321',
+          'direccion': 'Avenida Central 456',
+          'fecha_registro': DateTime.now().toIso8601String(),
+          'notas': 'Prefiere productos de talla M'
+        }
+      ];
+      
+      for (final cliente in clientesEjemplo) {
+        await db.insert('clientes', cliente);
+      }
+      
+      LoggingService.info('Datos de prueba inicializados correctamente');
+    }, 'initializeSampleData');
   }
 
   /// Cierra la conexión a la base de datos

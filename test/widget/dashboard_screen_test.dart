@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:ricitosdebb/screens/dashboard_screen.dart';
-import 'package:ricitosdebb/services/dashboard_service.dart';
-import 'package:ricitosdebb/services/theme_service.dart';
-import 'package:ricitosdebb/services/theme_manager_service.dart';
+import 'package:ricitosdebb/services/datos/dashboard_service.dart';
+import 'package:ricitosdebb/services/ui/theme_service.dart';
+import 'package:ricitosdebb/services/ui/theme_manager_service.dart';
 
 void main() {
   group('DashboardScreen Widget Tests', () {

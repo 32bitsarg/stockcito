@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:ricitosdebb/services/advanced_ml_service.dart';
-import 'package:ricitosdebb/services/logging_service.dart';
+import 'package:ricitosdebb/services/ml/advanced_ml_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
 
 class MLCustomerAnalysisWidget extends StatefulWidget {
