@@ -1327,13 +1327,22 @@ class DatosService {
   /// Obtiene ventas por rango de fechas
   Future<List<Venta>> getVentasByDateRange(DateTime startDate, DateTime endDate) async {
     try {
+      LoggingService.info('📅 [DATOS] Obteniendo ventas por rango: ${startDate.toIso8601String()} - ${endDate.toIso8601String()}');
+      LoggingService.info('👤 [DATOS] Usuario actual: $_currentUserId (isSignedIn: $_isSignedIn, isAnonymous: $_isAnonymous)');
+      
       final ventas = await getVentas();
-      return ventas.where((venta) => 
+      LoggingService.info('📊 [DATOS] Total de ventas obtenidas: ${ventas.length}');
+      
+      final ventasFiltradas = ventas.where((venta) => 
         venta.fecha.isAfter(startDate.subtract(const Duration(days: 1))) && 
         venta.fecha.isBefore(endDate.add(const Duration(days: 1)))
       ).toList();
+      
+      LoggingService.info('📈 [DATOS] Ventas filtradas por fecha: ${ventasFiltradas.length}');
+      
+      return ventasFiltradas;
     } catch (e) {
-      LoggingService.error('Error obteniendo ventas por rango de fechas: $e');
+      LoggingService.error('❌ [DATOS] Error obteniendo ventas por rango de fechas: $e');
       return [];
     }
   }
