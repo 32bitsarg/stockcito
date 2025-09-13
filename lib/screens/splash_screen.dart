@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
-import '../services/auth/supabase_auth_service.dart';
-import '../services/system/consent_manager_service.dart';
 import 'auth/login_screen.dart';
-import 'dashboard/dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,8 +15,6 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
   
-  final SupabaseAuthService _authService = SupabaseAuthService();
-  final ConsentManagerService _consentManager = ConsentManagerService();
 
   @override
   void initState() {
@@ -59,19 +54,11 @@ class _SplashScreenState extends State<SplashScreen>
       await Future.delayed(const Duration(milliseconds: 1500));
       
       if (mounted) {
-        // Verificar si hay un usuario autenticado
-        if (_authService.isSignedIn) {
-          // Usuario autenticado, verificar consentimiento y ir al dashboard
-          await _consentManager.checkAndShowConsentIfNeeded(context);
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          );
-        } else {
-          // No hay usuario, ir al login
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
-          );
-        }
+        // SIEMPRE mostrar LoginScreen por defecto
+        // El usuario decidirá si quiere iniciar sesión o continuar como invitado
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
       }
     } catch (e) {
       // En caso de error, ir al login

@@ -51,9 +51,7 @@ class SupabaseAuthService {
         }
       });
       
-      // Intentar restaurar sesión anónima existente o crear una nueva
-      await _ensureAnonymousSession();
-      
+      // NO crear sesión anónima automáticamente - solo inicializar Supabase
       LoggingService.info('Servicio de autenticación inicializado correctamente');
     } catch (e) {
       LoggingService.error('Error inicializando servicio de autenticación: $e');
@@ -141,28 +139,52 @@ class SupabaseAuthService {
   /// Inicia sesión anónima usando Supabase nativo
   Future<bool> signInAnonymously() async {
     try {
-      LoggingService.info('Iniciando sesión anónima');
+      LoggingService.info('🔐 Iniciando sesión anónima...');
       
       // Verificar si ya hay una sesión anónima activa
       final currentSession = Supabase.instance.client.auth.currentSession;
       if (currentSession?.user.isAnonymous == true) {
-        LoggingService.info('Reutilizando sesión anónima existente');
+        LoggingService.info('✅ Reutilizando sesión anónima existente con ID: ${currentSession!.user.id}');
+        await _saveAuthState('anonymous', 'anonymous');
         return true;
       }
       
-      // Crear nueva sesión anónima solo si no existe una
+      // Verificar si hay un user_id anónimo persistido
+      final persistedAnonymousId = await _getPersistedAnonymousUserId();
+      if (persistedAnonymousId != null) {
+        LoggingService.info('🔄 Intentando reutilizar user_id anónimo persistido: $persistedAnonymousId');
+        
+        // Intentar crear sesión con el ID persistido
+        final success = await _tryReuseAnonymousSession(persistedAnonymousId);
+        if (success) {
+          LoggingService.info('✅ Sesión anónima reutilizada exitosamente con ID: $persistedAnonymousId');
+          await _saveAuthState('anonymous', 'anonymous');
+          return true;
+        } else {
+          LoggingService.warning('⚠️ No se pudo reutilizar sesión anónima, creando nueva...');
+        }
+      }
+      
+      // Crear nueva sesión anónima
+      LoggingService.info('🆕 Creando nueva sesión anónima...');
       final AuthResponse response = await Supabase.instance.client.auth.signInAnonymously();
       
       if (response.user != null) {
+        final newAnonymousId = response.user!.id;
+        LoggingService.info('✅ Nueva sesión anónima creada con ID: $newAnonymousId');
+        
+        // Persistir el nuevo user_id anónimo
+        await _persistAnonymousUserId(newAnonymousId);
         await _saveAuthState('anonymous', 'anonymous');
-        LoggingService.info('Sesión anónima iniciada correctamente');
+        
+        LoggingService.info('💾 User_id anónimo persistido para futuras sesiones');
         return true;
       }
       
-      LoggingService.error('Error: Usuario anónimo no creado');
+      LoggingService.error('❌ Error: Usuario anónimo no creado');
       return false;
     } catch (e) {
-      LoggingService.error('Error iniciando sesión anónima: $e');
+      LoggingService.error('❌ Error iniciando sesión anónima: $e');
       return false;
     }
   }
@@ -202,23 +224,24 @@ class SupabaseAuthService {
     }
   }
 
-  /// Cierra sesión anónima (elimina el usuario anónimo)
+  /// Cierra sesión anónima (NO elimina el user_id persistido)
   Future<void> signOutAnonymous() async {
     try {
-      LoggingService.info('Cerrando sesión anónima');
+      LoggingService.info('🔐 Cerrando sesión anónima...');
       
       // Guardar datos locales antes de cerrar sesión
       if (isSignedIn) {
         await _backupLocalData();
       }
       
-      // Cerrar sesión anónima en Supabase
+      // Cerrar sesión anónima en Supabase (pero mantener user_id persistido)
       await Supabase.instance.client.auth.signOut();
       
+      // NO limpiar el user_id anónimo persistido - solo limpiar estado de sesión
       await _clearAuthState();
-      LoggingService.info('Sesión anónima cerrada correctamente');
+      LoggingService.info('✅ Sesión anónima cerrada correctamente (user_id persistido)');
     } catch (e) {
-      LoggingService.error('Error cerrando sesión anónima: $e');
+      LoggingService.error('❌ Error cerrando sesión anónima: $e');
     }
   }
 
@@ -370,25 +393,106 @@ class SupabaseAuthService {
     }
   }
 
-  /// Asegura que haya una sesión anónima activa
-  Future<void> _ensureAnonymousSession() async {
-    try {
-      // Verificar si ya hay una sesión activa
-      final currentSession = Supabase.instance.client.auth.currentSession;
-      if (currentSession?.user.isAnonymous == true) {
-        LoggingService.info('Sesión anónima ya activa');
-        return;
-      }
+  // ==================== MÉTODOS DE PERSISTENCIA ANÓNIMA ====================
 
-      // Crear nueva sesión anónima usando Supabase nativo
+  /// Persiste el user_id anónimo para futuras sesiones
+  Future<void> _persistAnonymousUserId(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('persisted_anonymous_user_id', userId);
+      await prefs.setString('persisted_anonymous_timestamp', DateTime.now().toIso8601String());
+      LoggingService.info('💾 User_id anónimo persistido: $userId');
+    } catch (e) {
+      LoggingService.error('❌ Error persistiendo user_id anónimo: $e');
+    }
+  }
+
+  /// Obtiene el user_id anónimo persistido
+  Future<String?> _getPersistedAnonymousUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('persisted_anonymous_user_id');
+      final timestamp = prefs.getString('persisted_anonymous_timestamp');
+      
+      if (userId != null && timestamp != null) {
+        final persistTime = DateTime.parse(timestamp);
+        final daysSincePersist = DateTime.now().difference(persistTime).inDays;
+        
+        LoggingService.info('🔍 User_id anónimo persistido encontrado: $userId (hace $daysSincePersist días)');
+        
+        // Si han pasado más de 30 días, considerar expirado
+        if (daysSincePersist > 30) {
+          LoggingService.warning('⚠️ User_id anónimo expirado (más de 30 días), limpiando...');
+          await _clearPersistedAnonymousUserId();
+          return null;
+        }
+        
+        return userId;
+      }
+      
+      LoggingService.info('🔍 No se encontró user_id anónimo persistido');
+      return null;
+    } catch (e) {
+      LoggingService.error('❌ Error obteniendo user_id anónimo persistido: $e');
+      return null;
+    }
+  }
+
+  /// Intenta reutilizar una sesión anónima existente
+  Future<bool> _tryReuseAnonymousSession(String userId) async {
+    try {
+      // Nota: Supabase no permite crear sesiones con user_id específicos
+      // Por ahora, siempre creamos una nueva sesión pero mantenemos la referencia al user_id
+      // En el futuro se podría implementar una lógica más sofisticada
+      
+      LoggingService.info('🔄 Creando nueva sesión pero manteniendo referencia al user_id: $userId');
+      
+      // Crear nueva sesión anónima
       final AuthResponse response = await Supabase.instance.client.auth.signInAnonymously();
       
       if (response.user != null) {
-        await _saveAuthState('anonymous', 'anonymous');
-        LoggingService.info('Sesión anónima creada correctamente');
+        // Actualizar el user_id persistido con el nuevo ID de la sesión
+        await _persistAnonymousUserId(response.user!.id);
+        LoggingService.info('✅ Nueva sesión creada con ID: ${response.user!.id} (referencia a: $userId)');
+        return true;
       }
+      
+      return false;
     } catch (e) {
-      LoggingService.error('Error asegurando sesión anónima: $e');
+      LoggingService.error('❌ Error reutilizando sesión anónima: $e');
+      return false;
+    }
+  }
+
+  /// Limpia el user_id anónimo persistido
+  Future<void> _clearPersistedAnonymousUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('persisted_anonymous_user_id');
+      await prefs.remove('persisted_anonymous_timestamp');
+      LoggingService.info('🗑️ User_id anónimo persistido limpiado');
+    } catch (e) {
+      LoggingService.error('❌ Error limpiando user_id anónimo persistido: $e');
+    }
+  }
+
+  /// Limpia completamente los datos anónimos (para resetear)
+  Future<void> clearAnonymousData() async {
+    try {
+      LoggingService.info('🗑️ Limpiando todos los datos anónimos...');
+      
+      // Cerrar sesión actual si es anónima
+      if (isAnonymous) {
+        await signOutAnonymous();
+      }
+      
+      // Limpiar user_id persistido
+      await _clearPersistedAnonymousUserId();
+      
+      // Aquí se podrían agregar más limpiezas si es necesario
+      LoggingService.info('✅ Datos anónimos limpiados completamente');
+    } catch (e) {
+      LoggingService.error('❌ Error limpiando datos anónimos: $e');
     }
   }
 

@@ -155,51 +155,62 @@ class DatosService {
   Future<List<Producto>> getProductos({int page = 0, int limit = _maxItemsPerPage}) async {
     try {
       final userId = _currentUserId;
-      LoggingService.info('DEBUG: getProductos - userId: $userId, isSignedIn: $_isSignedIn, isAnonymous: $_isAnonymous');
+      LoggingService.info('📦 [DATOS] getProductos - userId: $userId, isSignedIn: $_isSignedIn, isAnonymous: $_isAnonymous');
       
       if (userId == null) {
-        LoggingService.warning('Usuario no autenticado intentando obtener productos');
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando obtener productos');
         return [];
       }
 
       // Validar acceso del usuario
       if (!await _validateUserAccess(userId, 'get_productos')) {
-        LoggingService.warning('DEBUG: Acceso denegado para get_productos');
+        LoggingService.warning('⚠️ [DATOS] Acceso denegado para get_productos');
         return [];
       }
 
       // Crear sesión si no existe
       if (!_userSessions.containsKey(userId)) {
         _createUserSession(userId);
+        LoggingService.info('🆕 [DATOS] Sesión creada para usuario: $userId');
       }
 
       final cacheKey = 'productos_${userId}_${page}_$limit';
       
       // Verificar cache primero
       if (_isCacheValid(cacheKey)) {
-        return List<Producto>.from(_cache[cacheKey]);
+        final cachedProductos = List<Producto>.from(_cache[cacheKey]);
+        LoggingService.info('💾 [DATOS] Productos obtenidos desde cache: ${cachedProductos.length} productos');
+        return cachedProductos;
       }
 
       // Cargar desde local con paginación
-      final productos = await _localDb.getAllProductos();
+      LoggingService.info('🔍 [DATOS] Cargando productos desde base de datos local para userId: $userId');
+      final productos = await _localDb.getAllProductos(userId: userId);
+      LoggingService.info('📊 [DATOS] Productos encontrados en local: ${productos.length} productos');
+      
       final startIndex = page * limit;
       final endIndex = (startIndex + limit).clamp(0, productos.length);
       final paginatedProductos = productos.sublist(startIndex, endIndex);
+      LoggingService.info('📄 [DATOS] Productos paginados: ${paginatedProductos.length} productos (página $page, límite $limit)');
       
       // Si está autenticado, sincronizar con Supabase
       if (_isSignedIn && !_isAnonymous) {
+        LoggingService.info('🔄 [DATOS] Usuario autenticado, sincronizando con Supabase...');
         await _syncProductosFromSupabase();
         // Recargar después de sincronizar
-        final productosActualizados = await _localDb.getAllProductos();
+        final productosActualizados = await _localDb.getAllProductos(userId: userId);
         final paginatedActualizados = productosActualizados.sublist(startIndex, endIndex);
+        LoggingService.info('✅ [DATOS] Productos actualizados después de sincronización: ${paginatedActualizados.length} productos');
         _updateCache(cacheKey, paginatedActualizados);
         return paginatedActualizados;
+      } else {
+        LoggingService.info('👤 [DATOS] Usuario anónimo, solo datos locales');
       }
 
       _updateCache(cacheKey, paginatedProductos);
       return paginatedProductos;
     } catch (e) {
-      LoggingService.error('Error obteniendo productos: $e');
+      LoggingService.error('❌ [DATOS] Error obteniendo productos: $e');
       return [];
     }
   }
@@ -207,63 +218,64 @@ class DatosService {
   /// Guarda un producto (local + Supabase si está autenticado)
   Future<bool> saveProducto(Producto producto) async {
     try {
-      LoggingService.info('Iniciando guardado de producto: ${producto.nombre}');
+      LoggingService.info('💾 [DATOS] Iniciando guardado de producto: ${producto.nombre}');
       
       final userId = _currentUserId;
-      LoggingService.info('Usuario actual: $userId');
+      LoggingService.info('👤 [DATOS] Usuario actual: $userId (isSignedIn: $_isSignedIn, isAnonymous: $_isAnonymous)');
       
       if (userId == null) {
-        LoggingService.warning('Usuario no autenticado intentando guardar producto');
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando guardar producto');
         return false;
       }
 
       // Validar acceso del usuario
-      LoggingService.info('Validando acceso del usuario...');
+      LoggingService.info('🔐 [DATOS] Validando acceso del usuario...');
       if (!await _validateUserAccess(userId, 'save_producto')) {
-        LoggingService.warning('Acceso denegado para usuario $userId');
+        LoggingService.warning('⚠️ [DATOS] Acceso denegado para usuario $userId');
         return false;
       }
 
       // Validar tamaño de datos
-      LoggingService.info('Validando tamaño de datos...');
+      LoggingService.info('📏 [DATOS] Validando tamaño de datos...');
       final productoMap = producto.toMap();
       if (!_validateDataSize(productoMap)) {
-        LoggingService.warning('Producto excede el tamaño máximo permitido');
+        LoggingService.warning('⚠️ [DATOS] Producto excede el tamaño máximo permitido');
         return false;
       }
 
       // Sanitizar datos
-      LoggingService.info('Sanitizando datos...');
+      LoggingService.info('🧹 [DATOS] Sanitizando datos...');
       final sanitizedData = _sanitizeData(productoMap);
       final sanitizedProducto = Producto.fromMap(sanitizedData);
 
       // Guardar en local primero
-      LoggingService.info('Guardando en base de datos local...');
-      final insertId = await _localDb.insertProducto(sanitizedProducto);
-      LoggingService.info('Producto insertado en local con ID: $insertId');
+      LoggingService.info('💾 [DATOS] Guardando en base de datos local para userId: $userId...');
+      final insertId = await _localDb.insertProducto(sanitizedProducto, userId: userId);
+      LoggingService.info('✅ [DATOS] Producto insertado en local con ID: $insertId');
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        LoggingService.info('Usuario autenticado, agregando a cola de sincronización...');
+        LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
         _addToSyncQueue(SyncOperation(
           type: SyncType.create,
           table: 'productos',
           data: _prepareProductoForSupabase(sanitizedProducto),
         ));
       } else {
-        LoggingService.info('Usuario anónimo, solo guardado local');
+        LoggingService.info('👤 [DATOS] Usuario anónimo, solo guardado local');
       }
 
       // Invalidar cache del usuario
       _invalidateUserCache(userId, 'productos');
+      LoggingService.info('🗑️ [DATOS] Cache invalidado para usuario: $userId');
       
       // Entrenar IA con el nuevo producto (solo si hay consentimiento)
       await _trainMLIfConsented();
       
-      LoggingService.info('Producto guardado exitosamente para usuario $userId: ${sanitizedProducto.nombre}');
+      LoggingService.info('✅ [DATOS] Producto guardado exitosamente para usuario $userId: ${sanitizedProducto.nombre}');
       return true;
     } catch (e, stackTrace) {
-      LoggingService.error('Error guardando producto: $e', stackTrace: stackTrace);
+      LoggingService.error('❌ [DATOS] Error guardando producto: $e', stackTrace: stackTrace);
       return false;
     }
   }
@@ -1109,7 +1121,7 @@ class DatosService {
         fechaCreacion: DateTime.now(),
       );
 
-      await _localDb.insertProducto(materialProducto);
+      await _localDb.insertProducto(materialProducto, userId: userId);
 
       // Si está autenticado, sincronizar con Supabase
       if (_isSignedIn && !_isAnonymous) {

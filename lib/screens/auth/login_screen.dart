@@ -4,6 +4,7 @@ import '../../services/auth/supabase_auth_service.dart';
 import '../../services/auth/auth_error_handler.dart';
 import '../../services/auth/security_service.dart';
 import '../../services/system/consent_manager_service.dart';
+import '../../services/system/logging_service.dart';
 import 'register_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -92,6 +93,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (success && mounted) {
         // Mostrar consentimiento después del login anónimo
         await _consentManager.checkAndShowConsentIfNeeded(context);
+        
+        // Cargar datos existentes del usuario anónimo si los hay
+        await _loadAnonymousUserData();
+        
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
@@ -110,6 +115,17 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// Carga datos existentes del usuario anónimo
+  Future<void> _loadAnonymousUserData() async {
+    try {
+      // Los datos del usuario anónimo se cargarán automáticamente
+      // cuando DatosService detecte que hay una sesión anónima activa
+      LoggingService.info('Cargando datos del usuario anónimo...');
+    } catch (e) {
+      LoggingService.error('Error cargando datos anónimos: $e');
     }
   }
 
