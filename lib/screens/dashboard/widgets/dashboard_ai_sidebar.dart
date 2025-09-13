@@ -3,8 +3,12 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/ai/ai_insights_service.dart';
 import '../../../services/datos/smart_alerts_service.dart';
+import '../../../services/system/logging_service.dart';
 import '../../../widgets/simple_recommendations_widget.dart';
 import '../../../widgets/ml_customer_analysis_widget.dart';
+import '../../../widgets/mini_chart_widget.dart';
+import '../../../widgets/progress_indicators_widget.dart';
+import '../../../services/export/export_service.dart';
 
 class DashboardAISidebar extends StatefulWidget {
   final AIInsights? aiInsights;
@@ -23,6 +27,7 @@ class DashboardAISidebar extends StatefulWidget {
 class _DashboardAISidebarState extends State<DashboardAISidebar> {
   String _selectedTab = 'insights'; // insights, recomendaciones, clientes, alertas
   final SmartAlertsService _alertsService = SmartAlertsService();
+  final ExportService _exportService = ExportService();
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +69,7 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
             ),
           ),
           
+          
           // Contenido de IA - Usar todo el espacio disponible con scroll mejorado
           Expanded(
             child: SingleChildScrollView(
@@ -92,6 +98,19 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
         '${salesTrend.growthPercentage.toStringAsFixed(1)}% ${salesTrend.trend.toLowerCase()}',
         '${salesTrend.bestDay}: mejor día de ventas',
         salesColor,
+        actionType: 'ver_detalles',
+        onAction: () => _showSalesTrendDetails(salesTrend),
+      ),
+    );
+    insights.add(const SizedBox(height: 8));
+    
+    // Mini gráfico de tendencia
+    insights.add(
+      MiniChartWidget(
+        data: _generateSampleSalesData(),
+        color: salesColor,
+        title: 'Evolución Semanal',
+        showTrend: true,
       ),
     );
     insights.add(const SizedBox(height: 12));
@@ -106,6 +125,21 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
         popularProducts.topProduct,
         '${popularProducts.salesCount} ventas esta semana',
         popularColor,
+        actionType: 'exportar',
+        onAction: () => _exportPopularProducts(popularProducts),
+      ),
+    );
+    insights.add(const SizedBox(height: 8));
+    
+    // Indicador de progreso de ventas
+    insights.add(
+      ProgressIndicatorsWidget(
+        value: popularProducts.salesCount.toDouble(),
+        maxValue: 100.0, // Valor máximo esperado
+        label: 'Progreso de Ventas',
+        color: popularColor,
+        unit: ' ventas',
+        showPercentage: true,
       ),
     );
     insights.add(const SizedBox(height: 12));
@@ -122,6 +156,8 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
           recommendation.details,
           '💡 ${recommendation.action}',
           stockColor,
+          actionType: 'aplicar',
+          onAction: () => _applyStockRecommendation(recommendation),
         ),
       );
       insights.add(const SizedBox(height: 12));
@@ -130,14 +166,16 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
     return insights;
   }
 
-  // Construir insight directo
+  // Construir insight directo con botones de acción
   Widget _buildDirectInsightItem(
     IconData icon,
     String title,
     String value,
     String subtitle,
-    Color color,
-  ) {
+    Color color, {
+    String? actionType,
+    VoidCallback? onAction,
+  }) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -145,45 +183,141 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withOpacity(0.3)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 10,
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (actionType != null && onAction != null)
+                _buildActionButton(actionType, onAction, color),
+            ],
           ),
+          if (actionType != null && onAction != null) ...[
+            const SizedBox(height: 8),
+            _buildActionDescription(actionType),
+          ],
         ],
+      ),
+    );
+  }
+
+  // Botón de acción rápida
+  Widget _buildActionButton(String actionType, VoidCallback onAction, Color color) {
+    IconData actionIcon;
+    String actionText;
+    
+    switch (actionType.toLowerCase()) {
+      case 'ver_detalles':
+        actionIcon = Icons.visibility;
+        actionText = 'Ver';
+        break;
+      case 'aplicar':
+        actionIcon = Icons.check_circle;
+        actionText = 'Aplicar';
+        break;
+      case 'exportar':
+        actionIcon = Icons.download;
+        actionText = 'Exportar';
+        break;
+      case 'configurar':
+        actionIcon = Icons.settings;
+        actionText = 'Config';
+        break;
+      default:
+        actionIcon = Icons.info;
+        actionText = 'Info';
+    }
+
+    return GestureDetector(
+      onTap: onAction,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(actionIcon, color: color, size: 14),
+            const SizedBox(width: 4),
+            Text(
+              actionText,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Descripción de la acción
+  Widget _buildActionDescription(String actionType) {
+    String description;
+    
+    switch (actionType.toLowerCase()) {
+      case 'ver_detalles':
+        description = 'Haz clic para ver análisis detallado';
+        break;
+      case 'aplicar':
+        description = 'Haz clic para aplicar esta recomendación';
+        break;
+      case 'exportar':
+        description = 'Haz clic para exportar este insight';
+        break;
+      case 'configurar':
+        description = 'Haz clic para configurar alertas';
+        break;
+      default:
+        description = 'Haz clic para más información';
+    }
+
+    return Text(
+      description,
+      style: const TextStyle(
+        color: AppTheme.textSecondary,
+        fontSize: 9,
+        fontStyle: FontStyle.italic,
       ),
     );
   }
@@ -623,4 +757,184 @@ class _DashboardAISidebarState extends State<DashboardAISidebar> {
       return FontAwesomeIcons.lightbulb;
     }
   }
+
+  // Métodos de acción para insights
+  void _showSalesTrendDetails(SalesTrendInsight trend) {
+    LoggingService.info('🔍 [AI SIDEBAR] Mostrando detalles de tendencia de ventas');
+    LoggingService.info('📊 [AI SIDEBAR] Crecimiento: ${trend.growthPercentage}%, Tendencia: ${trend.trend}');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Análisis Detallado de Ventas'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDetailRow('Crecimiento', '${trend.growthPercentage.toStringAsFixed(1)}%'),
+            _buildDetailRow('Tendencia', trend.trend),
+            _buildDetailRow('Mejor Día', trend.bestDay),
+            _buildDetailRow('Ventas Semanales', trend.weeklySales.toStringAsFixed(0)),
+            _buildDetailRow('Estado', _getTrendStatus(trend.growthPercentage)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              LoggingService.info('📈 [AI SIDEBAR] Exportando análisis de ventas');
+              Navigator.pop(context);
+              _showExportOptions('tendencia_ventas');
+            },
+            child: const Text('Exportar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _exportPopularProducts(PopularProductsInsight products) {
+    LoggingService.info('📤 [AI SIDEBAR] Exportando productos populares');
+    LoggingService.info('⭐ [AI SIDEBAR] Producto top: ${products.topProduct}, Ventas: ${products.salesCount}');
+    
+    _showExportOptions('productos_populares');
+  }
+
+  void _applyStockRecommendation(StockRecommendationInsight recommendation) {
+    LoggingService.info('⚡ [AI SIDEBAR] Aplicando recomendación de stock');
+    LoggingService.info('📦 [AI SIDEBAR] Producto: ${recommendation.productName}, Acción: ${recommendation.action}');
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Aplicar Recomendación: ${recommendation.action}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Producto: ${recommendation.productName}'),
+            const SizedBox(height: 8),
+            Text('Detalles: ${recommendation.details}'),
+            const SizedBox(height: 8),
+            Text('Urgencia: ${recommendation.urgency}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              LoggingService.info('✅ [AI SIDEBAR] Recomendación aplicada exitosamente');
+              Navigator.pop(context);
+              _showSuccessMessage('Recomendación aplicada correctamente');
+            },
+            child: const Text('Aplicar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showExportOptions(String exportType) {
+    LoggingService.info('📋 [AI SIDEBAR] Mostrando opciones de exportación para: $exportType');
+    
+    // Preparar datos para exportación
+    final exportData = _prepareExportData(exportType);
+    
+    _exportService.showExportDialog(
+      context,
+      title: 'Exportar $exportType',
+      data: exportData,
+    );
+  }
+
+  // Preparar datos para exportación
+  Map<String, dynamic> _prepareExportData(String exportType) {
+    if (widget.aiInsights == null) {
+      return {'error': 'No hay datos disponibles para exportar'};
+    }
+
+    final insights = widget.aiInsights!;
+    
+    return {
+      'exportType': exportType,
+      'timestamp': DateTime.now().toIso8601String(),
+      'salesTrend': {
+        'growthPercentage': insights.salesTrend.growthPercentage,
+        'trend': insights.salesTrend.trend,
+        'bestDay': insights.salesTrend.bestDay,
+        'weeklySales': insights.salesTrend.weeklySales,
+      },
+      'popularProducts': {
+        'topProduct': insights.popularProducts.topProduct,
+        'salesCount': insights.popularProducts.salesCount,
+        'category': insights.popularProducts.category,
+      },
+      'stockRecommendations': insights.stockRecommendations.map((rec) => {
+        'productName': rec.productName,
+        'action': rec.action,
+        'details': rec.details,
+        'urgency': rec.urgency,
+      }).toList(),
+    };
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '$label:',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  String _getTrendStatus(double growth) {
+    if (growth > 15) return 'Excelente crecimiento';
+    if (growth > 5) return 'Buen crecimiento';
+    if (growth > -5) return 'Estable';
+    return 'Requiere atención';
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+
+  // Generar datos de muestra para mini gráficos
+  List<double> _generateSampleSalesData() {
+    // Generar datos de ventas de los últimos 7 días
+    final now = DateTime.now();
+    final data = <double>[];
+    
+    for (int i = 6; i >= 0; i--) {
+      final day = now.subtract(Duration(days: i));
+      // Simular datos con variación aleatoria
+      final baseValue = 100.0;
+      final variation = (day.weekday - 1) * 20.0; // Más ventas los fines de semana
+      final randomFactor = (day.day % 10) * 5.0; // Variación por día del mes
+      final value = baseValue + variation + randomFactor;
+      data.add(value);
+    }
+    
+    return data;
+  }
+
 }

@@ -17,26 +17,40 @@ class AIInsightsService {
   /// Genera insights automáticos basados en análisis de IA
   Future<AIInsights> generateInsights() async {
     try {
-      LoggingService.info('Generando insights automáticos de IA con ML');
+      LoggingService.info('🤖 [AI INSIGHTS] Iniciando generación de insights automáticos');
+      LoggingService.info('🔧 [AI INSIGHTS] Inicializando servicios de ML...');
 
       // Inicializar ML si no está inicializado
       await _mlService.initialize();
+      LoggingService.info('✅ [AI INSIGHTS] Servicios de ML inicializados correctamente');
 
       // Obtener datos recientes
       final now = DateTime.now();
       final last7Days = now.subtract(const Duration(days: 7));
       final last30Days = now.subtract(const Duration(days: 30));
 
+      LoggingService.info('📅 [AI INSIGHTS] Obteniendo datos del rango: ${last7Days.toIso8601String()} - ${now.toIso8601String()}');
+      
       final ventasRecientes = await _datosService.getVentasByDateRange(last7Days, now);
       final ventasMes = await _datosService.getVentasByDateRange(last30Days, now);
       final productos = await _datosService.getAllProductos();
 
-      // Generar insights usando ML
-      final salesTrend = await _generateSalesTrendML(ventasRecientes, ventasMes);
-      final popularProducts = await _generatePopularProductsML(ventasRecientes, productos);
-      final stockRecommendations = await _generateStockRecommendationsML(productos);
+      LoggingService.info('📊 [AI INSIGHTS] Datos obtenidos - Ventas recientes: ${ventasRecientes.length}, Ventas mes: ${ventasMes.length}, Productos: ${productos.length}');
 
-      LoggingService.info('Insights generados exitosamente con ML');
+      // Generar insights usando ML
+      LoggingService.info('🧠 [AI INSIGHTS] Generando tendencia de ventas con ML...');
+      final salesTrend = await _generateSalesTrendML(ventasRecientes, ventasMes);
+      LoggingService.info('📈 [AI INSIGHTS] Tendencia generada - Crecimiento: ${salesTrend.growthPercentage}%, Tendencia: ${salesTrend.trend}');
+
+      LoggingService.info('⭐ [AI INSIGHTS] Generando análisis de productos populares...');
+      final popularProducts = await _generatePopularProductsML(ventasRecientes, productos);
+      LoggingService.info('🏆 [AI INSIGHTS] Productos populares - Top: ${popularProducts.topProduct}, Ventas: ${popularProducts.salesCount}');
+
+      LoggingService.info('📦 [AI INSIGHTS] Generando recomendaciones de stock...');
+      final stockRecommendations = await _generateStockRecommendationsML(productos);
+      LoggingService.info('💡 [AI INSIGHTS] Recomendaciones generadas: ${stockRecommendations.length}');
+
+      LoggingService.info('🎉 [AI INSIGHTS] Todos los insights generados exitosamente');
 
       return AIInsights(
         salesTrend: salesTrend,
@@ -46,7 +60,7 @@ class AIInsightsService {
       );
 
     } catch (e) {
-      LoggingService.error('Error generando insights: $e');
+      LoggingService.error('❌ [AI INSIGHTS] Error generando insights: $e');
       return AIInsights.empty();
     }
   }
@@ -204,7 +218,12 @@ extension MLInsightsMethods on AIInsightsService {
   /// Genera productos populares usando ML
   Future<PopularProductsInsight> _generatePopularProductsML(List<Venta> ventasRecientes, List<Producto> productos) async {
     try {
+      LoggingService.info('🔍 [AI INSIGHTS] Analizando productos populares...');
+      LoggingService.info('📊 [AI INSIGHTS] Ventas recientes recibidas: ${ventasRecientes.length}');
+      LoggingService.info('📦 [AI INSIGHTS] Productos disponibles: ${productos.length}');
+      
       if (ventasRecientes.isEmpty) {
+        LoggingService.warning('⚠️ [AI INSIGHTS] No hay ventas recientes para analizar');
         return PopularProductsInsight(
           topProduct: 'Sin ventas recientes',
           salesCount: 0,
@@ -216,13 +235,22 @@ extension MLInsightsMethods on AIInsightsService {
       // Análisis ML de productos populares
       final Map<int, int> productSales = {};
       
+      LoggingService.info('🛒 [AI INSIGHTS] Procesando items de ventas...');
       for (final venta in ventasRecientes) {
+        LoggingService.info('💰 [AI INSIGHTS] Venta ${venta.id}: ${venta.items.length} items, Total: ${venta.total}');
         for (final item in venta.items) {
+          LoggingService.info('📦 [AI INSIGHTS] Item: Producto ${item.productoId}, Cantidad: ${item.cantidad}');
           productSales[item.productoId] = (productSales[item.productoId] ?? 0) + item.cantidad;
         }
       }
 
+      LoggingService.info('📈 [AI INSIGHTS] Productos vendidos: ${productSales.length}');
+      for (final entry in productSales.entries) {
+        LoggingService.info('🏆 [AI INSIGHTS] Producto ${entry.key}: ${entry.value} unidades vendidas');
+      }
+
       if (productSales.isEmpty) {
+        LoggingService.warning('⚠️ [AI INSIGHTS] No se encontraron productos vendidos');
         return PopularProductsInsight(
           topProduct: 'Sin productos vendidos',
           salesCount: 0,
@@ -236,23 +264,30 @@ extension MLInsightsMethods on AIInsightsService {
           .reduce((a, b) => a.value > b.value ? a : b)
           .key;
       
+      LoggingService.info('🥇 [AI INSIGHTS] Producto más vendido ID: $topProductId con ${productSales[topProductId]} unidades');
+      
       final topProduct = productos.firstWhere(
         (p) => p.id == topProductId,
-        orElse: () => Producto(
-          id: topProductId,
-          nombre: 'Producto desconocido',
-          categoria: 'N/A',
-          talla: 'N/A',
-          stock: 0,
-          costoMateriales: 0,
-          costoManoObra: 0,
-          gastosGenerales: 0,
-          margenGanancia: 0,
-          fechaCreacion: DateTime.now(),
-        ),
+        orElse: () {
+          LoggingService.warning('⚠️ [AI INSIGHTS] Producto $topProductId no encontrado en la lista de productos');
+          return Producto(
+            id: topProductId,
+            nombre: 'Producto desconocido',
+            categoria: 'N/A',
+            talla: 'N/A',
+            stock: 0,
+            costoMateriales: 0,
+            costoManoObra: 0,
+            gastosGenerales: 0,
+            margenGanancia: 0,
+            fechaCreacion: DateTime.now(),
+          );
+        },
       );
 
       final salesCount = productSales[topProductId] ?? 0;
+      
+      LoggingService.info('✅ [AI INSIGHTS] Producto popular: ${topProduct.nombre} (${salesCount} ventas)');
       
       // Determinar color basado en rendimiento
       String color;
@@ -271,7 +306,7 @@ extension MLInsightsMethods on AIInsightsService {
         category: topProduct.categoria,
       );
     } catch (e) {
-      LoggingService.error('Error generando productos populares ML: $e');
+      LoggingService.error('❌ [AI INSIGHTS] Error generando productos populares ML: $e');
       return PopularProductsInsight(
         topProduct: 'Error en análisis',
         salesCount: 0,

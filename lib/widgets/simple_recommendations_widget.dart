@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ricitosdebb/config/app_theme.dart';
 import 'package:ricitosdebb/models/ai_recommendation.dart';
 import 'package:ricitosdebb/services/ml/local_recommendations_service.dart';
+import 'package:ricitosdebb/services/system/logging_service.dart';
 
 /// Widget simplificado para mostrar recomendaciones de IA
 class SimpleRecommendationsWidget extends StatefulWidget {
@@ -33,6 +34,8 @@ class _SimpleRecommendationsWidgetState extends State<SimpleRecommendationsWidge
     if (!mounted) return;
     
     try {
+      LoggingService.info('🤖 [RECOMENDACIONES] Cargando recomendaciones de IA...');
+      
       // Obtener solo recomendaciones activas (nuevas y vistas)
       final allRecommendations = _recommendationsService.getRecommendations();
       final activeRecommendations = allRecommendations
@@ -40,12 +43,14 @@ class _SimpleRecommendationsWidgetState extends State<SimpleRecommendationsWidge
                        r.status == RecommendationStatus.vista)
           .toList();
       
+      LoggingService.info('📊 [RECOMENDACIONES] Encontradas ${activeRecommendations.length} recomendaciones activas');
+      
       setState(() {
         _recommendations = activeRecommendations;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error cargando recomendaciones: $e');
+      LoggingService.error('❌ [RECOMENDACIONES] Error cargando recomendaciones: $e');
       if (mounted) {
         setState(() {
           _recommendations = [];
@@ -172,36 +177,8 @@ class _SimpleRecommendationsWidgetState extends State<SimpleRecommendationsWidge
                   fontSize: 10,
                 ),
               ),
-              Row(
-                children: [
-                  if (recommendation.status == RecommendationStatus.nueva)
-                    _buildActionButton(
-                      'Ver',
-                      Icons.visibility,
-                      () => _markAsViewed(recommendation.id),
-                    ),
-                  if (recommendation.status == RecommendationStatus.vista) ...[
-                    _buildActionButton(
-                      'Aplicar',
-                      Icons.check,
-                      () => _markAsApplied(recommendation.id),
-                    ),
-                    const SizedBox(width: 8),
-                    _buildActionButton(
-                      'Descartar',
-                      Icons.close,
-                      () => _markAsDiscarded(recommendation.id),
-                    ),
-                  ],
-                  const SizedBox(width: 8),
-                  _buildActionButton(
-                    'Eliminar',
-                    Icons.delete,
-                    () => _deleteRecommendation(recommendation.id),
-                    isDestructive: true,
-                  ),
-                ],
-              ),
+              // Solo botón de descartar (cruz)
+              _buildDiscardButton(recommendation.id),
             ],
           ),
         ],
@@ -250,53 +227,59 @@ class _SimpleRecommendationsWidgetState extends State<SimpleRecommendationsWidge
     );
   }
 
-  Widget _buildActionButton(String text, IconData icon, VoidCallback onTap, {bool isDestructive = false}) {
-    final color = isDestructive ? Colors.red : Colors.blue;
+  // Botón simplificado de descartar (solo cruz)
+  Widget _buildDiscardButton(String recommendationId) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _discardRecommendation(recommendationId),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: color.withOpacity(0.3)),
+          color: Colors.red.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.red.withOpacity(0.3)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-            Text(
-              text,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        child: const Icon(
+          Icons.close,
+          size: 14,
+          color: Colors.red,
         ),
       ),
     );
   }
 
-  Future<void> _markAsViewed(String recommendationId) async {
-    await _recommendationsService.markAsViewed(recommendationId);
-    _loadRecommendations();
-  }
-
-  Future<void> _markAsApplied(String recommendationId) async {
-    await _recommendationsService.markAsApplied(recommendationId);
-    _loadRecommendations();
-  }
-
-  Future<void> _markAsDiscarded(String recommendationId) async {
-    await _recommendationsService.markAsDiscarded(recommendationId);
-    _loadRecommendations();
-  }
-
-  Future<void> _deleteRecommendation(String recommendationId) async {
-    await _recommendationsService.deleteRecommendation(recommendationId);
-    _loadRecommendations();
+  // Método simplificado para descartar recomendación
+  Future<void> _discardRecommendation(String recommendationId) async {
+    try {
+      LoggingService.info('🗑️ [RECOMENDACIONES] Descartando recomendación: $recommendationId');
+      
+      await _recommendationsService.markAsDiscarded(recommendationId);
+      
+      LoggingService.info('✅ [RECOMENDACIONES] Recomendación descartada exitosamente');
+      
+      // Mostrar mensaje de confirmación
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Recomendación descartada'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      
+      _loadRecommendations();
+    } catch (e) {
+      LoggingService.error('❌ [RECOMENDACIONES] Error descartando recomendación: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error al descartar recomendación'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }
