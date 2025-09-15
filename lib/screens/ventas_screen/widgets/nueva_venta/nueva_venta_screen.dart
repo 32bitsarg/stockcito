@@ -211,11 +211,11 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         context.read<DashboardService>().actualizarDatos();
       }
 
-      // Mostrar notificación de venta
-      await NotificationService().showSaleAlert(
-        venta.cliente,
-        venta.total,
-      );
+      // Mostrar notificación de venta (temporalmente comentado por error de inicialización)
+      // await NotificationService().showSaleAlert(
+      //   venta.cliente,
+      //   venta.total,
+      // );
 
       // Cerrar diálogo de carga
       ErrorHandlerService.hideLoadingDialog(context);
@@ -227,7 +227,7 @@ class _NuevaVentaScreenState extends State<NuevaVentaScreen> {
         );
         
         // Cerrar el modal y limpiar formulario
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true); // Retornar true para indicar éxito
         _limpiarFormulario();
       }
     } catch (e, stackTrace) {

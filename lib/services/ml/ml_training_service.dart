@@ -293,6 +293,9 @@ class MLTrainingService {
         'sizes': tallas,
         'timestamp': DateTime.now().toIso8601String(),
       },
+      'model_type': 'aggregated_training', // Campo requerido por la tabla
+      'timestamp': DateTime.now().toIso8601String(),
+      'is_anonymous': true,
     };
   }
 
