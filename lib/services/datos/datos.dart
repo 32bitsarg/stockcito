@@ -57,11 +57,17 @@ class DatosService {
     
     try {
       final hasConsent = await _consentService!.hasUserGivenConsent();
+      final isAutomatic = await _consentService!.wasConsentSetAutomatically();
+      
       if (hasConsent) {
         await _mlTrainingService!.trainWithNewData();
-        LoggingService.info('IA entrenada con datos nuevos (consentimiento otorgado)');
+        if (isAutomatic) {
+          LoggingService.info('🤖 IA entrenada con datos nuevos (consentimiento automático para usuario autenticado)');
+        } else {
+          LoggingService.info('🤖 IA entrenada con datos nuevos (consentimiento otorgado manualmente)');
+        }
       } else {
-        LoggingService.info('IA no entrenada - usuario no ha dado consentimiento');
+        LoggingService.info('🤖 IA no entrenada - usuario no ha dado consentimiento');
       }
     } catch (e) {
       LoggingService.error('Error entrenando IA: $e');
@@ -73,20 +79,27 @@ class DatosService {
     try {
       LoggingService.info('Eliminando venta con ID: $id');
       
-      if (_authService?.isSignedIn == true) {
-        // Usuario autenticado: eliminar de Supabase y local
-        await Supabase.instance.client
-            .from('ventas')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', _authService!.currentUserId!);
-        
-        LoggingService.info('Venta eliminada de Supabase');
-      }
-      
-      // Eliminar de base de datos local
+      // Eliminar de base de datos local primero
       await _localDb.deleteVenta(id);
       LoggingService.info('Venta eliminada de base de datos local');
+      
+      // Solo sincronizar con Supabase si el usuario está autenticado (no anónimo)
+      if (_isSignedIn && !_isAnonymous) {
+        try {
+          // Para usuarios autenticados, agregar a cola de sincronización
+          _addToSyncQueue(SyncOperation(
+            type: SyncType.delete,
+            table: 'ventas',
+            data: {'id': id},
+          ));
+          LoggingService.info('Venta agregada a cola de sincronización para Supabase');
+        } catch (e) {
+          LoggingService.warning('Error agregando venta a cola de sincronización: $e');
+          // No re-lanzar error, la venta ya se eliminó localmente
+        }
+      } else {
+        LoggingService.info('Usuario anónimo - solo eliminación local');
+      }
       
     } catch (e) {
       LoggingService.error('Error eliminando venta: $e');
@@ -306,6 +319,62 @@ class DatosService {
     }
   }
 
+  /// Actualiza el stock de un producto (local + Supabase si está autenticado)
+  Future<bool> updateStock(int productoId, int nuevaCantidad) async {
+    try {
+      LoggingService.info('Actualizando stock del producto $productoId a $nuevaCantidad');
+      
+      // Actualizar en local
+      await _localDb.updateProductoStock(productoId, nuevaCantidad);
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.update,
+          table: 'productos',
+          data: {
+            'id': productoId,
+            'stock': nuevaCantidad,
+          },
+        ));
+      }
+
+      // Invalidar cache
+      _invalidateCache('productos_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Stock actualizado: Producto $productoId = $nuevaCantidad');
+      return true;
+    } catch (e) {
+      LoggingService.error('Error actualizando stock: $e');
+      return false;
+    }
+  }
+
+  /// Reduce el stock de un producto al venderlo
+  Future<bool> reduceStock(int productoId, int cantidadVendida) async {
+    try {
+      LoggingService.info('Reduciendo stock: Producto $productoId, cantidad vendida: $cantidadVendida');
+      
+      // Obtener producto actual
+      final productos = await getAllProductos();
+      final producto = productos.firstWhere((p) => p.id == productoId);
+      
+      if (producto.stock < cantidadVendida) {
+        LoggingService.warning('Stock insuficiente: ${producto.stock} < $cantidadVendida');
+        return false;
+      }
+      
+      // Calcular nuevo stock
+      final nuevoStock = producto.stock - cantidadVendida;
+      
+      // Actualizar stock
+      return await updateStock(productoId, nuevoStock);
+    } catch (e) {
+      LoggingService.error('Error reduciendo stock: $e');
+      return false;
+    }
+  }
+
   /// Elimina un producto (local + Supabase si está autenticado)
   Future<bool> deleteProducto(int id) async {
     try {
@@ -346,6 +415,7 @@ class DatosService {
       
       if (_isSignedIn && !_isAnonymous) {
         await _syncVentasFromSupabase();
+        await _syncDetallesVentaFromSupabase();
         final ventasActualizadas = await _localDb.getAllVentas();
         _updateCache(cacheKey, ventasActualizadas);
         return ventasActualizadas;
@@ -370,6 +440,15 @@ class DatosService {
           table: 'ventas',
           data: _prepareVentaForSupabase(venta),
         ));
+        
+        // Sincronizar también los detalles de venta
+        for (final item in venta.items) {
+          _addToSyncQueue(SyncOperation(
+            type: SyncType.create,
+            table: 'detalles_venta',
+            data: _prepareDetalleVentaForSupabase(item),
+          ));
+        }
       }
 
       _invalidateCache('ventas_${_currentUserId ?? 'anon'}');
@@ -730,6 +809,37 @@ class DatosService {
     }
   }
 
+  /// Sincroniza detalles de venta desde Supabase
+  Future<void> _syncDetallesVentaFromSupabase() async {
+    try {
+      final userId = _currentUserId;
+      if (userId == null) return;
+
+      await _applyRateLimit();
+
+      final lastSync = await _getLastSyncTime('detalles_venta');
+      
+      final response = await Supabase.instance.client
+          .from('detalles_venta')
+          .select()
+          .eq('user_id', userId)
+          .gt('updated_at', lastSync.toIso8601String())
+          .order('updated_at', ascending: true);
+
+      if (response.isNotEmpty) {
+        for (final item in response) {
+          final detalle = VentaItem.fromMap(item);
+          await _localDb.insertDetalleVenta(detalle);
+        }
+        
+        await _updateLastSyncTime('detalles_venta');
+        LoggingService.info('${response.length} detalles de venta sincronizados desde Supabase');
+      }
+    } catch (e) {
+      LoggingService.error('Error sincronizando detalles de venta desde Supabase: $e');
+    }
+  }
+
   /// Sincroniza clientes desde Supabase
   Future<void> _syncClientesFromSupabase() async {
     try {
@@ -833,6 +943,15 @@ class DatosService {
     final data = venta.toMap();
     data['user_id'] = _currentUserId;
     data['created_at'] = venta.fecha.toIso8601String();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    return data;
+  }
+
+  /// Prepara un detalle de venta para Supabase
+  Map<String, dynamic> _prepareDetalleVentaForSupabase(VentaItem detalle) {
+    final data = detalle.toMap();
+    data['user_id'] = _currentUserId;
+    data['created_at'] = DateTime.now().toIso8601String();
     data['updated_at'] = DateTime.now().toIso8601String();
     return data;
   }
@@ -963,6 +1082,9 @@ class DatosService {
     final sessionId = DateTime.now().millisecondsSinceEpoch.toString();
     _userSessions[userId] = sessionId;
     _userCacheTimestamps[userId] = DateTime.now();
+    
+    // Configurar el userId en LocalDatabaseService
+    _localDb.setCurrentUserId(userId);
     
     LoggingService.info('Sesión creada para usuario $userId');
   }
@@ -1306,7 +1428,16 @@ class DatosService {
 
   /// Inserta una nueva venta (método de compatibilidad)
   Future<int> insertVenta(Venta venta) async {
-    return await _localDb.insertVenta(venta);
+    final ventaId = await _localDb.insertVenta(venta);
+    
+    // Invalidar cache de productos porque el stock se redujo
+    _invalidateCache('productos_${_currentUserId ?? 'anon'}');
+    
+    // Invalidar cache de ventas
+    _invalidateCache('ventas_${_currentUserId ?? 'anon'}');
+    
+    LoggingService.info('Cache invalidado después de insertar venta $ventaId');
+    return ventaId;
   }
 
   /// Obtiene todos los productos (método de compatibilidad)

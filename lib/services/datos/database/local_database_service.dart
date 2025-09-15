@@ -13,11 +13,17 @@ class LocalDatabaseService {
   LocalDatabaseService._internal();
 
   Database? _database;
+  String? _currentUserId;
 
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
+  }
+
+  /// Establece el ID del usuario actual
+  void setCurrentUserId(String? userId) {
+    _currentUserId = userId;
   }
 
   /// Wrapper para manejar errores en operaciones de base de datos
@@ -57,7 +63,7 @@ class LocalDatabaseService {
 
       return await openDatabase(
         path,
-        version: 3,
+        version: 4,
         onCreate: _createTables,
         onUpgrade: _upgradeDatabase,
       );
@@ -123,6 +129,9 @@ class LocalDatabaseService {
           user_id TEXT NOT NULL,
           venta_id INTEGER NOT NULL,
           producto_id INTEGER NOT NULL,
+          nombre_producto TEXT NOT NULL,
+          categoria TEXT NOT NULL,
+          talla TEXT NOT NULL,
           cantidad INTEGER NOT NULL,
           precio_unitario REAL NOT NULL,
           subtotal REAL NOT NULL,
@@ -233,6 +242,34 @@ class LocalDatabaseService {
         await _recreateTablesWithUserId(db);
       }
     }
+
+    if (oldVersion < 4) {
+      // Migración de versión 3 a 4 - Agregar columnas faltantes a detalles_venta
+      LoggingService.info('Ejecutando migración de base de datos de v3 a v4 - Agregando columnas a detalles_venta');
+      
+      try {
+        // Agregar columnas faltantes a detalles_venta
+        await db.execute('ALTER TABLE detalles_venta ADD COLUMN nombre_producto TEXT');
+        await db.execute('ALTER TABLE detalles_venta ADD COLUMN categoria TEXT');
+        await db.execute('ALTER TABLE detalles_venta ADD COLUMN talla TEXT');
+        
+        // Actualizar registros existentes con valores por defecto
+        await db.execute('''
+          UPDATE detalles_venta 
+          SET 
+            nombre_producto = COALESCE((SELECT nombre FROM productos WHERE productos.id = detalles_venta.producto_id), 'Producto desconocido'),
+            categoria = COALESCE((SELECT categoria FROM productos WHERE productos.id = detalles_venta.producto_id), 'Sin categoría'),
+            talla = COALESCE((SELECT talla FROM productos WHERE productos.id = detalles_venta.producto_id), 'Sin talla')
+          WHERE nombre_producto IS NULL
+        ''');
+        
+        LoggingService.info('Migración de base de datos v3 a v4 completada');
+      } catch (e) {
+        LoggingService.error('Error en migración v3 a v4: $e');
+        // Si falla, recrear la tabla detalles_venta con la nueva estructura
+        await _recreateDetallesVentaTable(db);
+      }
+    }
   }
   
   /// Recrea las tablas con user_id si la migración falla
@@ -252,6 +289,39 @@ class LocalDatabaseService {
       LoggingService.info('Tablas recreadas con user_id exitosamente');
     } catch (e) {
       LoggingService.error('Error recreando tablas: $e');
+      rethrow;
+    }
+  }
+
+  /// Recrea la tabla detalles_venta con la nueva estructura si la migración falla
+  Future<void> _recreateDetallesVentaTable(Database db) async {
+    try {
+      LoggingService.info('Recreando tabla detalles_venta con nueva estructura...');
+      
+      // Eliminar tabla existente
+      await db.execute('DROP TABLE IF EXISTS detalles_venta');
+      
+      // Recrear con la nueva estructura completa
+      await db.execute('''
+        CREATE TABLE detalles_venta (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          venta_id INTEGER NOT NULL,
+          producto_id INTEGER NOT NULL,
+          nombre_producto TEXT NOT NULL,
+          categoria TEXT NOT NULL,
+          talla TEXT NOT NULL,
+          cantidad INTEGER NOT NULL,
+          precio_unitario REAL NOT NULL,
+          subtotal REAL NOT NULL,
+          FOREIGN KEY (venta_id) REFERENCES ventas (id),
+          FOREIGN KEY (producto_id) REFERENCES productos (id)
+        )
+      ''');
+      
+      LoggingService.info('Tabla detalles_venta recreada exitosamente');
+    } catch (e) {
+      LoggingService.error('Error recreando tabla detalles_venta: $e');
       rethrow;
     }
   }
@@ -310,6 +380,19 @@ class LocalDatabaseService {
         whereArgs: [producto.id],
       );
     }, 'updateProducto');
+  }
+
+  /// Actualiza solo el stock de un producto
+  Future<int> updateProductoStock(int productoId, int nuevoStock) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      return await db.update(
+        'productos',
+        {'stock': nuevoStock},
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [productoId, _currentUserId ?? 'default'],
+      );
+    }, 'updateProductoStock');
   }
 
   /// Elimina un producto
@@ -386,37 +469,109 @@ class LocalDatabaseService {
 
   // ==================== VENTAS ====================
 
-  /// Obtiene todas las ventas
+  /// Obtiene todas las ventas con sus items
   Future<List<Venta>> getAllVentas() async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
-      final List<Map<String, dynamic>> maps = await db.query('ventas');
-      return List.generate(maps.length, (i) => Venta.fromMap(maps[i]));
+      final List<Map<String, dynamic>> maps = await db.query(
+        'ventas',
+        where: 'user_id = ?',
+        whereArgs: [_currentUserId ?? 'default'],
+      );
+      
+      final List<Venta> ventas = [];
+      for (final map in maps) {
+        final venta = Venta.fromMap(map);
+        // Cargar los items de la venta
+        final items = await getDetallesVenta(venta.id!);
+        ventas.add(venta.copyWith(items: items));
+      }
+      
+      LoggingService.info('Ventas cargadas: ${ventas.length} con items');
+      return ventas;
     }, 'getAllVentas');
   }
 
-  /// Obtiene una venta por ID
+  /// Obtiene una venta por ID con sus items
   Future<Venta?> getVenta(int id) async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
       final List<Map<String, dynamic>> maps = await db.query(
         'ventas',
-        where: 'id = ?',
-        whereArgs: [id],
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, _currentUserId ?? 'default'],
       );
       if (maps.isNotEmpty) {
-        return Venta.fromMap(maps.first);
+        final venta = Venta.fromMap(maps.first);
+        // Cargar los items de la venta
+        final items = await getDetallesVenta(venta.id!);
+        return venta.copyWith(items: items);
       }
       return null;
     }, 'getVenta');
   }
 
-  /// Inserta una nueva venta
+  /// Inserta una nueva venta con sus items y reduce el stock
   Future<int> insertVenta(Venta venta) async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
-      return await db.insert('ventas', venta.toMap());
+      
+      // Insertar la venta principal
+      final ventaData = venta.toMap();
+      ventaData['user_id'] = _currentUserId ?? 'default';
+      final ventaId = await db.insert('ventas', ventaData);
+      
+      // Insertar los items de la venta y reducir stock
+      for (final item in venta.items) {
+        final itemData = item.toMap();
+        itemData['venta_id'] = ventaId;
+        itemData['user_id'] = _currentUserId ?? 'default';
+        await db.insert('detalles_venta', itemData);
+        
+        // Reducir stock del producto
+        await _reduceProductStock(db, item.productoId, item.cantidad);
+      }
+      
+      LoggingService.info('Venta insertada con ${venta.items.length} items - ID: $ventaId');
+      return ventaId;
     }, 'insertVenta');
+  }
+
+  /// Reduce el stock de un producto
+  Future<void> _reduceProductStock(Database db, int productoId, int cantidadVendida) async {
+    try {
+      // Obtener stock actual
+      final List<Map<String, dynamic>> result = await db.query(
+        'productos',
+        columns: ['stock'],
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [productoId, _currentUserId ?? 'default'],
+      );
+      
+      if (result.isNotEmpty) {
+        final stockActual = result.first['stock'] as int;
+        final nuevoStock = stockActual - cantidadVendida;
+        
+        if (nuevoStock < 0) {
+          LoggingService.warning('Stock insuficiente para producto $productoId: $stockActual < $cantidadVendida');
+          return;
+        }
+        
+        // Actualizar stock
+        await db.update(
+          'productos',
+          {'stock': nuevoStock},
+          where: 'id = ? AND user_id = ?',
+          whereArgs: [productoId, _currentUserId ?? 'default'],
+        );
+        
+        LoggingService.info('Stock reducido: Producto $productoId: $stockActual -> $nuevoStock (-$cantidadVendida)');
+      } else {
+        LoggingService.warning('Producto $productoId no encontrado para reducir stock');
+      }
+    } catch (e) {
+      LoggingService.error('Error reduciendo stock del producto $productoId: $e');
+    }
   }
 
   /// Actualiza una venta existente
@@ -432,16 +587,61 @@ class LocalDatabaseService {
     }, 'updateVenta');
   }
 
-  /// Elimina una venta
+  /// Elimina una venta y sus items
   Future<int> deleteVenta(int id) async {
     return await _handleDatabaseOperation(() async {
       final db = await database;
-      return await db.delete(
+      
+      // Eliminar primero los items de la venta
+      await deleteDetallesVenta(id);
+      
+      // Luego eliminar la venta principal
+      final result = await db.delete(
         'ventas',
-        where: 'id = ?',
-        whereArgs: [id],
+        where: 'id = ? AND user_id = ?',
+        whereArgs: [id, _currentUserId ?? 'default'],
       );
+      
+      LoggingService.info('Venta eliminada con sus items - ID: $id');
+      return result;
     }, 'deleteVenta');
+  }
+
+  // ==================== DETALLES DE VENTA ====================
+
+  /// Inserta un detalle de venta
+  Future<int> insertDetalleVenta(VentaItem detalle) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final data = detalle.toMap();
+      data['user_id'] = _currentUserId ?? 'default';
+      return await db.insert('detalles_venta', data);
+    }, 'insertDetalleVenta');
+  }
+
+  /// Obtiene todos los detalles de una venta específica
+  Future<List<VentaItem>> getDetallesVenta(int ventaId) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'detalles_venta',
+        where: 'venta_id = ? AND user_id = ?',
+        whereArgs: [ventaId, _currentUserId ?? 'default'],
+      );
+      return List.generate(maps.length, (i) => VentaItem.fromMap(maps[i]));
+    }, 'getDetallesVenta');
+  }
+
+  /// Elimina todos los detalles de una venta específica
+  Future<int> deleteDetallesVenta(int ventaId) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      return await db.delete(
+        'detalles_venta',
+        where: 'venta_id = ? AND user_id = ?',
+        whereArgs: [ventaId, _currentUserId ?? 'default'],
+      );
+    }, 'deleteDetallesVenta');
   }
 
   // ==================== MÉTRICAS ====================

@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ricitosdebb/services/system/logging_service.dart';
 import 'ml_training_service.dart';
 import 'package:ricitosdebb/services/system/data_migration_service.dart';
+import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
 
 /// Servicio para manejar el consentimiento de ML y migración de datos
 class MLConsentService {
@@ -51,7 +52,16 @@ class MLConsentService {
   Future<bool> hasUserGivenConsent() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_consentGivenKey) ?? false;
+      final hasConsent = prefs.getBool(_consentGivenKey);
+      
+      // Si no hay valor guardado, activar consentimiento por defecto para usuarios autenticados
+      if (hasConsent == null) {
+        LoggingService.info('Consentimiento no establecido, activando por defecto para usuarios autenticados');
+        await _setDefaultConsentForAuthenticatedUsers();
+        return prefs.getBool(_consentGivenKey) ?? false;
+      }
+      
+      return hasConsent;
     } catch (e) {
       LoggingService.error('Error verificando consentimiento del usuario: $e');
       return false;
@@ -66,6 +76,29 @@ class MLConsentService {
       LoggingService.info('Consentimiento del usuario establecido: $consent');
     } catch (e) {
       LoggingService.error('Error estableciendo consentimiento del usuario: $e');
+    }
+  }
+
+  /// Establece consentimiento por defecto para usuarios autenticados
+  Future<void> _setDefaultConsentForAuthenticatedUsers() async {
+    try {
+      // Importar el servicio de autenticación para verificar si el usuario está autenticado
+      final authService = SupabaseAuthService();
+      
+      // Solo activar consentimiento por defecto para usuarios autenticados (no anónimos)
+      if (authService.isSignedIn && !authService.isAnonymous) {
+        LoggingService.info('Usuario autenticado detectado, activando consentimiento por defecto');
+        await setUserConsent(true);
+        await _markConsentAsAutomatic();
+        LoggingService.info('✅ Consentimiento activado por defecto para usuario autenticado');
+      } else {
+        LoggingService.info('Usuario anónimo o no autenticado, consentimiento permanece desactivado');
+        await setUserConsent(false);
+      }
+    } catch (e) {
+      LoggingService.error('Error estableciendo consentimiento por defecto: $e');
+      // En caso de error, establecer como false por seguridad
+      await setUserConsent(false);
     }
   }
 
@@ -147,17 +180,41 @@ class MLConsentService {
     }
   }
 
+  /// Verifica si el consentimiento fue establecido automáticamente (por defecto)
+  Future<bool> wasConsentSetAutomatically() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getBool('consent_set_automatically') ?? false;
+    } catch (e) {
+      LoggingService.error('Error verificando si consentimiento fue automático: $e');
+      return false;
+    }
+  }
+
+  /// Marca que el consentimiento fue establecido automáticamente
+  Future<void> _markConsentAsAutomatic() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('consent_set_automatically', true);
+      LoggingService.info('Consentimiento marcado como establecido automáticamente');
+    } catch (e) {
+      LoggingService.error('Error marcando consentimiento como automático: $e');
+    }
+  }
+
   /// Obtiene estadísticas del consentimiento
   Future<Map<String, dynamic>> getConsentStats() async {
     try {
       final hasShown = await hasConsentBeenShown();
       final hasConsent = await hasUserGivenConsent();
       final hasMigrated = await hasDataBeenMigrated();
+      final isAutomatic = await wasConsentSetAutomatically();
       
       return {
         'consent_shown': hasShown,
         'user_consent': hasConsent,
         'data_migrated': hasMigrated,
+        'consent_automatic': isAutomatic,
       };
     } catch (e) {
       LoggingService.error('Error obteniendo estadísticas de consentimiento: $e');

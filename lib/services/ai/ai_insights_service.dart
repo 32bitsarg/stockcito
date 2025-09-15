@@ -36,6 +36,13 @@ class AIInsightsService {
       final productos = await _datosService.getAllProductos();
 
       LoggingService.info('📊 [AI INSIGHTS] Datos obtenidos - Ventas recientes: ${ventasRecientes.length}, Ventas mes: ${ventasMes.length}, Productos: ${productos.length}');
+      
+      // Debug: Mostrar todas las ventas disponibles
+      final todasLasVentas = await _datosService.getAllVentas();
+      LoggingService.info('🔍 [AI INSIGHTS] Total de ventas disponibles: ${todasLasVentas.length}');
+      for (final venta in todasLasVentas) {
+        LoggingService.info('📋 [AI INSIGHTS] Venta ${venta.id}: ${venta.fecha.toIso8601String()}, Items: ${venta.items.length}, Total: ${venta.total}');
+      }
 
       // Generar insights usando ML
       LoggingService.info('🧠 [AI INSIGHTS] Generando tendencia de ventas con ML...');
