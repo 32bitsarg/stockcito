@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_theme.dart';
+import '../services/system/update_service.dart';
+import '../widgets/update_notification_widget.dart';
 
-class ModernSidebar extends StatelessWidget {
+class ModernSidebar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
 
@@ -11,6 +13,21 @@ class ModernSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.onItemSelected,
   });
+
+  @override
+  State<ModernSidebar> createState() => _ModernSidebarState();
+}
+
+class _ModernSidebarState extends State<ModernSidebar> {
+  final UpdateService _updateService = UpdateService();
+  UpdateInfo? _pendingUpdate;
+  bool _isCheckingUpdates = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdates();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,19 +69,21 @@ class ModernSidebar extends StatelessWidget {
       },
     ];
 
-    return Container(
-      width: 80,
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(4, 0),
+    return Stack(
+      children: [
+        Container(
+          width: 80,
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceColor,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(4, 0),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Column(
+          child: Column(
         children: [
           // Logo section
           Container(
@@ -119,7 +138,7 @@ class ModernSidebar extends StatelessWidget {
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
-                final isSelected = selectedIndex == index;
+                final isSelected = widget.selectedIndex == index;
                 
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -127,7 +146,7 @@ class ModernSidebar extends StatelessWidget {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      onTap: () => onItemSelected(index),
+                      onTap: () => widget.onItemSelected(index),
                       child: Container(
                         height: 60,
                         decoration: BoxDecoration(
@@ -196,27 +215,39 @@ class ModernSidebar extends StatelessWidget {
             ),
           ),
           
-          // Bottom section
+          // Bottom section - Icono de actualizaciones
           Container(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    FontAwesomeIcons.circleQuestion,
-                    color: AppTheme.primaryColor,
-                    size: 20,
+                GestureDetector(
+                  onTap: _isCheckingUpdates ? null : _checkForUpdates,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _getUpdateIconColor(),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _isCheckingUpdates
+                        ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(_getUpdateIconTextColor()),
+                            ),
+                          )
+                        : Icon(
+                            _getUpdateIcon(),
+                            color: _getUpdateIconTextColor(),
+                            size: 20,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ayuda',
+                  _getUpdateText(),
                   style: TextStyle(
                     fontSize: 8,
                     color: AppTheme.textSecondary,
@@ -228,7 +259,80 @@ class ModernSidebar extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+    
+    // Widget de notificación de actualización
+    if (_pendingUpdate != null)
+      UpdateNotificationWidget(
+        updateInfo: _pendingUpdate!,
+        isMandatory: _pendingUpdate!.isMandatory,
+        onDismiss: () {
+          setState(() {
+            _pendingUpdate = null;
+          });
+        },
+      ),
+  ],
+);
+  }
+
+  // ==================== MÉTODOS DE ACTUALIZACIONES ====================
+
+  /// Verifica si hay actualizaciones disponibles
+  Future<void> _checkForUpdates() async {
+    if (_isCheckingUpdates) return;
+    
+    setState(() {
+      _isCheckingUpdates = true;
+    });
+
+    try {
+      final updateInfo = await _updateService.checkForUpdates();
+      
+      if (updateInfo != null) {
+        setState(() {
+          _pendingUpdate = updateInfo;
+        });
+      }
+    } catch (e) {
+      // Error silencioso para no interrumpir la UI
+    } finally {
+      setState(() {
+        _isCheckingUpdates = false;
+      });
+    }
+  }
+
+  /// Obtiene el icono según el estado de actualizaciones
+  IconData _getUpdateIcon() {
+    if (_pendingUpdate != null) {
+      return _pendingUpdate!.isMandatory ? Icons.system_update : Icons.system_update_alt;
+    }
+    return Icons.system_update;
+  }
+
+  /// Obtiene el color del icono según el estado
+  Color _getUpdateIconColor() {
+    if (_pendingUpdate != null) {
+      return _pendingUpdate!.isMandatory ? Colors.red.shade100 : Colors.blue.shade100;
+    }
+    return AppTheme.primaryColor.withOpacity(0.1);
+  }
+
+  /// Obtiene el color del texto del icono
+  Color _getUpdateIconTextColor() {
+    if (_pendingUpdate != null) {
+      return _pendingUpdate!.isMandatory ? Colors.red.shade600 : Colors.blue.shade600;
+    }
+    return AppTheme.primaryColor;
+  }
+
+  /// Obtiene el texto según el estado
+  String _getUpdateText() {
+    if (_pendingUpdate != null) {
+      return _pendingUpdate!.isMandatory ? 'Actualizar' : 'Actualizar';
+    }
+    return 'Actualizar';
   }
 }
 
