@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ricitosdebb/services/system/data_migration_service.dart';
-import 'package:ricitosdebb/config/app_theme.dart';
+import 'package:stockcito/services/system/data_migration_service.dart';
+import 'package:stockcito/config/app_theme.dart';
 
 class MLMigrationStatsWidget extends StatefulWidget {
   const MLMigrationStatsWidget({super.key});

@@ -24,6 +24,10 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  
+  // Estados para descarga
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
 
   @override
   void initState() {
@@ -47,7 +51,7 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
     ));
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, -1),
+      begin: const Offset(0, 1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
@@ -171,8 +175,8 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
   /// Construye el tooltip para actualizaciones opcionales
   Widget _buildOptionalUpdateTooltip() {
     return Positioned(
-      top: 60,
-      right: 16,
+      bottom: 60,
+      left: 16,
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: SlideTransition(
@@ -243,13 +247,30 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton(
-                          onPressed: _handleUpdate,
+                          onPressed: _isDownloading ? null : _handleUpdate,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue.shade600,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          child: const Text('Actualizar'),
+                          child: _isDownloading
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        value: _downloadProgress,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text('${(_downloadProgress * 100).toInt()}%'),
+                                  ],
+                                )
+                              : const Text('Actualizar'),
                         ),
                       ),
                     ],
@@ -267,9 +288,37 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
   void _handleUpdate() async {
     try {
       LoggingService.info('Usuario inició actualización a versión ${widget.updateInfo.version}');
-      await UpdateService().downloadUpdate(widget.updateInfo);
+      
+      // Mostrar diálogo de confirmación
+      final confirmed = await _showUpdateConfirmationDialog();
+      if (!confirmed) return;
+      
+      // Iniciar descarga
+      setState(() {
+        _isDownloading = true;
+        _downloadProgress = 0.0;
+      });
+      
+      // Descargar archivo
+      final filePath = await UpdateService().downloadUpdateFile(
+        widget.updateInfo,
+        (progress) {
+          setState(() {
+            _downloadProgress = progress;
+          });
+        },
+      );
+      
+      // Instalar actualización
+      await UpdateService().installUpdate(filePath);
+      
     } catch (e) {
       LoggingService.error('Error iniciando actualización: $e');
+      setState(() {
+        _isDownloading = false;
+        _downloadProgress = 0.0;
+      });
+      
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -279,6 +328,38 @@ class _UpdateNotificationWidgetState extends State<UpdateNotificationWidget>
         );
       }
     }
+  }
+
+  /// Muestra el diálogo de confirmación de actualización
+  Future<bool> _showUpdateConfirmationDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Actualización'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('¿Deseas actualizar a la versión ${widget.updateInfo.version}?'),
+            const SizedBox(height: 12),
+            const Text(
+              'La aplicación se cerrará automáticamente para instalar la actualización.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Actualizar'),
+          ),
+        ],
+      ),
+    ) ?? false;
   }
 
   /// Maneja la acción de descartar

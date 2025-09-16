@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ricitosdebb/config/app_theme.dart';
-import 'package:ricitosdebb/models/smart_alert.dart';
+import 'package:stockcito/config/app_theme.dart';
+import 'package:stockcito/models/smart_alert.dart';
 import '../services/datos/smart_alerts_service.dart';
-import 'package:ricitosdebb/widgets/animated_widgets.dart';
+import 'package:stockcito/widgets/animated_widgets.dart';
 
 /// Widget unificado que combina alertas inteligentes y recomendaciones de stock
 class UnifiedAlertsWidget extends StatefulWidget {

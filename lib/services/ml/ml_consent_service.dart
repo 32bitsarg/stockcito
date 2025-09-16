@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 import 'ml_training_service.dart';
-import 'package:ricitosdebb/services/system/data_migration_service.dart';
-import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
+import 'package:stockcito/services/system/data_migration_service.dart';
+import 'package:stockcito/services/auth/supabase_auth_service.dart';
 
 /// Servicio para manejar el consentimiento de ML y migración de datos
 class MLConsentService {

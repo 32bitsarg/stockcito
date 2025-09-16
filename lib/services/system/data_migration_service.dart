@@ -1,8 +1,8 @@
 import '../datos/datos.dart';
-import 'package:ricitosdebb/services/ml/ml_training_service.dart';
-import 'package:ricitosdebb/services/ml/ml_consent_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/services/ai/ai_cache_service.dart';
+import 'package:stockcito/services/ml/ml_training_service.dart';
+import 'package:stockcito/services/ml/ml_consent_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/services/ai/ai_cache_service.dart';
 
 class DataMigrationService {
   static final DataMigrationService _instance = DataMigrationService._internal();

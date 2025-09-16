@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ricitosdebb/config/app_theme.dart';
-import 'package:ricitosdebb/models/ai_recommendation.dart';
-import 'package:ricitosdebb/services/ml/local_recommendations_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/config/app_theme.dart';
+import 'package:stockcito/models/ai_recommendation.dart';
+import 'package:stockcito/services/ml/local_recommendations_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Widget simplificado para mostrar recomendaciones de IA
 class SimpleRecommendationsWidget extends StatefulWidget {

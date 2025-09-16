@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 enum NotificationType {
   stockLow,

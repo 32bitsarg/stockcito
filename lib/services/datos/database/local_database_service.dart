@@ -4,7 +4,7 @@ import 'dart:io';
 import '../../../models/producto.dart';
 import '../../../models/venta.dart';
 import '../../../models/cliente.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio para manejo de base de datos local SQLite
 class LocalDatabaseService {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 import 'sync_service.dart';
 
 /// Servicio de notificaciones para sincronización

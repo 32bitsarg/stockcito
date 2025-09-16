@@ -22,6 +22,7 @@ class _ModernSidebarState extends State<ModernSidebar> {
   final UpdateService _updateService = UpdateService();
   UpdateInfo? _pendingUpdate;
   bool _isCheckingUpdates = false;
+  OverlayEntry? _currentOverlayEntry;
 
   @override
   void initState() {
@@ -30,7 +31,15 @@ class _ModernSidebarState extends State<ModernSidebar> {
   }
 
   @override
+  void dispose() {
+    _dismissCurrentNotification();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    print('🔍 [MODERN SIDEBAR] build() llamado - _pendingUpdate: ${_pendingUpdate?.version}');
+    
     final List<Map<String, dynamic>> menuItems = [
       {
         'icon': FontAwesomeIcons.house,
@@ -221,7 +230,7 @@ class _ModernSidebarState extends State<ModernSidebar> {
             child: Column(
               children: [
                 GestureDetector(
-                  onTap: _isCheckingUpdates ? null : _checkForUpdates,
+                  onTap: _isCheckingUpdates ? null : () => _checkForUpdates(forceCheck: true),
                   child: Container(
                     width: 40,
                     height: 40,
@@ -261,25 +270,45 @@ class _ModernSidebarState extends State<ModernSidebar> {
       ),
     ),
     
-    // Widget de notificación de actualización
-    if (_pendingUpdate != null)
-      UpdateNotificationWidget(
-        updateInfo: _pendingUpdate!,
-        isMandatory: _pendingUpdate!.isMandatory,
-        onDismiss: () {
-          setState(() {
-            _pendingUpdate = null;
-          });
-        },
-      ),
   ],
 );
   }
 
   // ==================== MÉTODOS DE ACTUALIZACIONES ====================
 
+  /// Muestra la notificación de actualización usando Overlay
+  void _showUpdateNotification(UpdateInfo updateInfo) {
+    // Eliminar tooltip anterior si existe
+    _dismissCurrentNotification();
+    
+    final overlay = Overlay.of(context);
+    
+    _currentOverlayEntry = OverlayEntry(
+      builder: (context) => UpdateNotificationWidget(
+        updateInfo: updateInfo,
+        isMandatory: updateInfo.isMandatory,
+        onDismiss: () {
+          _dismissCurrentNotification();
+        },
+      ),
+    );
+    
+    overlay.insert(_currentOverlayEntry!);
+  }
+
+  /// Elimina la notificación actual si existe
+  void _dismissCurrentNotification() {
+    if (_currentOverlayEntry != null) {
+      _currentOverlayEntry!.remove();
+      _currentOverlayEntry = null;
+    }
+    setState(() {
+      _pendingUpdate = null;
+    });
+  }
+
   /// Verifica si hay actualizaciones disponibles
-  Future<void> _checkForUpdates() async {
+  Future<void> _checkForUpdates({bool forceCheck = false}) async {
     if (_isCheckingUpdates) return;
     
     setState(() {
@@ -287,15 +316,38 @@ class _ModernSidebarState extends State<ModernSidebar> {
     });
 
     try {
-      final updateInfo = await _updateService.checkForUpdates();
+      final updateInfo = await _updateService.checkForUpdates(forceCheck: forceCheck);
       
       if (updateInfo != null) {
+        print('🔄 [MODERN SIDEBAR] Actualización detectada, actualizando estado...');
         setState(() {
           _pendingUpdate = updateInfo;
         });
+        print('✅ [MODERN SIDEBAR] Estado actualizado - _pendingUpdate: ${_pendingUpdate?.version}');
+        print('🎯 [MODERN SIDEBAR] _pendingUpdate != null: ${_pendingUpdate != null}');
+        
+        // Mostrar el tooltip usando Overlay
+        _showUpdateNotification(updateInfo);
+      } else if (forceCheck) {
+        // Si es una verificación forzada y no hay actualizaciones, mostrar mensaje
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Aplicación actualizada - No hay nuevas versiones disponibles'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      // Error silencioso para no interrumpir la UI
+      if (forceCheck) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error verificando actualizaciones: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isCheckingUpdates = false;

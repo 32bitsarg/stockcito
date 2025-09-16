@@ -1,8 +1,8 @@
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'datos.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/models/producto.dart';
-import 'package:ricitosdebb/models/venta.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/models/producto.dart';
+import 'package:stockcito/models/venta.dart';
 
 class MLPredictionService {
   static final MLPredictionService _instance = MLPredictionService._internal();

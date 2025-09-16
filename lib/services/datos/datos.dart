@@ -1,9 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/services/ml/ml_training_service.dart';
-import 'package:ricitosdebb/services/ml/ml_consent_service.dart';
+import 'package:stockcito/services/auth/supabase_auth_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/services/ml/ml_training_service.dart';
+import 'package:stockcito/services/ml/ml_consent_service.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';

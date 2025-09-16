@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
-import 'package:ricitosdebb/services/datos/datos.dart';
-import 'package:ricitosdebb/models/producto.dart';
-import 'package:ricitosdebb/models/venta.dart';
-import 'package:ricitosdebb/models/cliente.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/services/auth/supabase_auth_service.dart';
+import 'package:stockcito/services/datos/datos.dart';
+import 'package:stockcito/models/producto.dart';
+import 'package:stockcito/models/venta.dart';
+import 'package:stockcito/models/cliente.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

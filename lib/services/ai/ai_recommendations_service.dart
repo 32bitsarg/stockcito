@@ -1,5 +1,5 @@
-import 'package:ricitosdebb/services/ml/ml_persistence_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/ml/ml_persistence_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio de recomendaciones de IA basado en datos reales
 class AIRecommendationsService {

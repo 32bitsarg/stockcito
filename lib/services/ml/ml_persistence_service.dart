@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 class MLPersistenceService {
   static final MLPersistenceService _instance = MLPersistenceService._internal();

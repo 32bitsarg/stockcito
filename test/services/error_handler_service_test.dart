@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/system/error_handler_service.dart';
+import 'package:stockcito/services/system/error_handler_service.dart';
 
 void main() {
   group('ErrorHandlerService', () {

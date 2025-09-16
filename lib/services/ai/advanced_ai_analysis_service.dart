@@ -1,7 +1,7 @@
-import 'package:ricitosdebb/services/datos/datos.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/models/producto.dart';
-import 'package:ricitosdebb/models/venta.dart';
+import 'package:stockcito/services/datos/datos.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/models/producto.dart';
+import 'package:stockcito/models/venta.dart';
 import 'dart:math';
 
 class AdvancedAIAnalysisService {

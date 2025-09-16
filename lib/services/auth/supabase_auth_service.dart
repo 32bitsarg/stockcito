@@ -1,11 +1,11 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:ricitosdebb/config/supabase_config.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/services/datos/datos.dart';
-import 'package:ricitosdebb/services/auth/security_service.dart';
-import 'package:ricitosdebb/services/auth/password_validation_service.dart';
+import 'package:stockcito/config/supabase_config.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/services/datos/datos.dart';
+import 'package:stockcito/services/auth/security_service.dart';
+import 'package:stockcito/services/auth/password_validation_service.dart';
 
 /// Servicio de autenticación con Supabase
 class SupabaseAuthService {

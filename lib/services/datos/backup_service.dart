@@ -1,7 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'package:ricitosdebb/services/auth/supabase_auth_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/auth/supabase_auth_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio de respaldo y recuperación de datos
 class BackupService {

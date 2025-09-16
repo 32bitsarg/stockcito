@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/models/ai_recommendation.dart';
-import 'package:ricitosdebb/services/datos/datos.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/services/ai/ai_cache_service.dart';
+import 'package:stockcito/models/ai_recommendation.dart';
+import 'package:stockcito/services/datos/datos.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/services/ai/ai_cache_service.dart';
 
 /// Servicio para gestionar recomendaciones de IA localmente
 class LocalRecommendationsService {
