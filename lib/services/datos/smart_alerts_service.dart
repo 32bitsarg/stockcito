@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/models/smart_alert.dart';
+import 'package:stockcito/models/smart_alert.dart';
 import 'datos.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio para gestionar alertas inteligentes
 class SmartAlertsService {

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ricitosdebb/services/datos/database/local_database_service.dart';
-import 'package:ricitosdebb/models/producto.dart';
-import 'package:ricitosdebb/models/venta.dart';
-import 'package:ricitosdebb/models/cliente.dart';
+import 'package:stockcito/services/datos/database/local_database_service.dart';
+import 'package:stockcito/models/producto.dart';
+import 'package:stockcito/models/venta.dart';
+import 'package:stockcito/models/cliente.dart';
 
 void main() {
   group('Database Integration Tests', () {

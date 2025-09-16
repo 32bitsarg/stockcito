@@ -1,5 +1,5 @@
-import 'package:ricitosdebb/services/auth/password_validation_service.dart';
-import 'package:ricitosdebb/services/auth/security_service.dart';
+import 'package:stockcito/services/auth/password_validation_service.dart';
+import 'package:stockcito/services/auth/security_service.dart';
 
 /// Manejador centralizado de errores de autenticación
 /// Proporciona mensajes de error amigables para el usuario

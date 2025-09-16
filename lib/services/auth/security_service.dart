@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/config/supabase_config.dart';
+import 'package:stockcito/config/supabase_config.dart';
 
 /// Servicio de seguridad para autenticación
 class SecurityService {

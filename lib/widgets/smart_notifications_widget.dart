@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:ricitosdebb/config/app_theme.dart';
-import 'package:ricitosdebb/models/smart_alert.dart';
+import 'package:stockcito/config/app_theme.dart';
+import 'package:stockcito/models/smart_alert.dart';
 import '../services/datos/smart_alerts_service.dart';
-import 'package:ricitosdebb/services/notifications/notification_service.dart';
+import 'package:stockcito/services/notifications/notification_service.dart';
 
 /// Widget de notificaciones inteligentes que se integra con el header
 class SmartNotificationsWidget extends StatefulWidget {

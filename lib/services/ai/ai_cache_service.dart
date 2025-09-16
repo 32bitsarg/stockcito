@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ricitosdebb/models/ai_recommendation.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
+import 'package:stockcito/models/ai_recommendation.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio de caché para recomendaciones de IA
 class AICacheService {

@@ -1,8 +1,8 @@
 import 'dart:math';
-import 'package:ricitosdebb/services/datos/datos.dart';
-import 'package:ricitosdebb/services/ml/ml_persistence_service.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/models/venta.dart';
+import 'package:stockcito/services/datos/datos.dart';
+import 'package:stockcito/services/ml/ml_persistence_service.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/models/venta.dart';
 
 class AdvancedMLService {
   static final AdvancedMLService _instance = AdvancedMLService._internal();

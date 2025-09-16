@@ -1,9 +1,9 @@
 import '../datos/ml_prediction_service.dart';
-import 'package:ricitosdebb/services/ml/advanced_ml_service.dart';
+import 'package:stockcito/services/ml/advanced_ml_service.dart';
 import '../datos/datos.dart';
-import 'package:ricitosdebb/services/system/logging_service.dart';
-import 'package:ricitosdebb/models/producto.dart';
-import 'package:ricitosdebb/models/venta.dart';
+import 'package:stockcito/services/system/logging_service.dart';
+import 'package:stockcito/models/producto.dart';
+import 'package:stockcito/models/venta.dart';
 
 class AIInsightsService {
   static final AIInsightsService _instance = AIInsightsService._internal();

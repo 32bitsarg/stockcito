@@ -1,4 +1,4 @@
-import 'package:ricitosdebb/config/supabase_config.dart';
+import 'package:stockcito/config/supabase_config.dart';
 
 /// Servicio de validación robusta de contraseñas
 class PasswordValidationService {

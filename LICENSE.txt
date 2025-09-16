@@ -1,0 +1,18 @@
+LICENCIA DE SOFTWARE - STOCKCITO
+
+Copyright (c) 2025 32bitsarg
+
+Este software se proporciona "tal como está", sin garantía de ningún tipo, 
+expresa o implícita, incluyendo pero no limitado a las garantías de 
+comercialización, idoneidad para un propósito particular y no infracción.
+
+En ningún caso los autores o titulares de derechos de autor serán 
+responsables de cualquier reclamo, daño u otra responsabilidad, ya sea 
+en una acción de contrato, agravio o de otra manera, que surja de, 
+fuera de o en conexión con el software o el uso u otros tratos en el software.
+
+El software puede contener componentes de terceros sujetos a sus propias 
+licencias. Consulte los archivos de licencia correspondientes para obtener 
+más información.
+
+Al instalar este software, usted acepta los términos de esta licencia.
