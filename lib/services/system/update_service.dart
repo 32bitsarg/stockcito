@@ -74,7 +74,7 @@ class UpdateService {
   static final UpdateService _instance = UpdateService._internal();
   factory UpdateService() => _instance;
   UpdateService._internal();
-
+         
   // Configuración del repositorio
   static const String _githubOwner = '32bitsarg'; // Cambiar por tu usuario
   static const String _githubRepo = 'stockcito'; // Cambiar por tu repo
