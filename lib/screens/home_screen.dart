@@ -6,7 +6,7 @@ import '../widgets/metric_card.dart';
 import '../widgets/action_button.dart';
 import '../widgets/windows_app_bar.dart';
 import '../widgets/windows_button.dart';
-import 'calcularprecios_screen/modern_calculo_precio_screen.dart';
+import 'calcularprecios_screen/modern_calculadora_precios_screen.dart';
 import 'inventario_screen/modern_inventario_screen.dart';
 import 'reportes_screen/modern_reportes_screen.dart';
 import 'configuracion_screen/modern_configuracion_screen.dart';
@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const ModernCalculoPrecioScreen()),
+                      MaterialPageRoute(builder: (context) => const ModernCalculadoraPreciosScreen()),
                     ).then((_) => _loadProductos());
                   },
                 ),
@@ -270,7 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => const ModernCalculoPrecioScreen()),
+                                MaterialPageRoute(builder: (context) => const ModernCalculadoraPreciosScreen()),
                               ).then((_) => _loadProductos());
                             },
                             icon: const Icon(Icons.add),

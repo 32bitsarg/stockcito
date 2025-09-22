@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
-import '../../calcularprecios_screen/modern_calculo_precio_screen.dart';
+import '../../calcularprecios_screen/modern_calculadora_precios_screen.dart';
 import '../../inventario_screen/modern_inventario_screen.dart';
 import '../../reportes_screen/modern_reportes_screen.dart';
 import '../../ventas_screen/modern_ventas_screen.dart';
@@ -98,7 +98,7 @@ class DashboardMenuItems {
       case 4:
         return const ModernReportesScreen();
       case 5:
-        return const ModernCalculoPrecioScreen();
+        return const ModernCalculadoraPreciosScreen();
       case 6:
         return const ModernConfiguracionScreen();
       default:

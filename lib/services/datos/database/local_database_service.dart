@@ -4,6 +4,8 @@ import 'dart:io';
 import '../../../models/producto.dart';
 import '../../../models/venta.dart';
 import '../../../models/cliente.dart';
+import '../../../screens/calcularprecios_screen/models/costo_directo.dart';
+import '../../../screens/calcularprecios_screen/models/costo_indirecto.dart';
 import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio para manejo de base de datos local SQLite
@@ -63,7 +65,7 @@ class LocalDatabaseService {
 
       return await openDatabase(
         path,
-        version: 4,
+        version: 5,
         onCreate: _createTables,
         onUpgrade: _upgradeDatabase,
       );
@@ -137,6 +139,38 @@ class LocalDatabaseService {
           subtotal REAL NOT NULL,
           FOREIGN KEY (venta_id) REFERENCES ventas (id),
           FOREIGN KEY (producto_id) REFERENCES productos (id)
+        )
+      ''');
+
+      // Tabla de costos directos
+      await db.execute('''
+        CREATE TABLE costos_directos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          nombre TEXT NOT NULL,
+          tipo TEXT NOT NULL,
+          cantidad REAL NOT NULL,
+          unidad TEXT NOT NULL,
+          precio_unitario REAL NOT NULL,
+          desperdicio REAL NOT NULL,
+          descripcion TEXT,
+          fecha_creacion TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // Tabla de costos indirectos
+      await db.execute('''
+        CREATE TABLE costos_indirectos (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          nombre TEXT NOT NULL,
+          tipo TEXT NOT NULL,
+          costo_mensual REAL NOT NULL,
+          productos_estimados_mensuales INTEGER NOT NULL,
+          descripcion TEXT,
+          fecha_creacion TEXT NOT NULL,
+          updated_at TEXT NOT NULL
         )
       ''');
 
@@ -268,6 +302,50 @@ class LocalDatabaseService {
         LoggingService.error('Error en migración v3 a v4: $e');
         // Si falla, recrear la tabla detalles_venta con la nueva estructura
         await _recreateDetallesVentaTable(db);
+      }
+    }
+
+    if (oldVersion < 5) {
+      // Migración de versión 4 a 5 - Agregar tablas de costos
+      LoggingService.info('Ejecutando migración de base de datos de v4 a v5 - Agregando tablas de costos');
+      
+      try {
+        // Crear tabla de costos directos
+        await db.execute('''
+          CREATE TABLE costos_directos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            nombre TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            cantidad REAL NOT NULL,
+            unidad TEXT NOT NULL,
+            precio_unitario REAL NOT NULL,
+            desperdicio REAL NOT NULL,
+            descripcion TEXT,
+            fecha_creacion TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+
+        // Crear tabla de costos indirectos
+        await db.execute('''
+          CREATE TABLE costos_indirectos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            nombre TEXT NOT NULL,
+            tipo TEXT NOT NULL,
+            costo_mensual REAL NOT NULL,
+            productos_estimados_mensuales INTEGER NOT NULL,
+            descripcion TEXT,
+            fecha_creacion TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+        
+        LoggingService.info('Migración de base de datos v4 a v5 completada - Tablas de costos creadas');
+      } catch (e) {
+        LoggingService.error('Error en migración v4 a v5: $e');
+        rethrow;
       }
     }
   }
@@ -405,6 +483,148 @@ class LocalDatabaseService {
         whereArgs: [id],
       );
     }, 'deleteProducto');
+  }
+
+  // ==================== COSTOS DIRECTOS ====================
+
+  /// Inserta un costo directo
+  Future<int> insertCostoDirecto(CostoDirecto costo, {String? userId}) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final costoMap = costo.toMap();
+      if (userId != null) {
+        costoMap['user_id'] = userId;
+      }
+      return await db.insert('costos_directos', costoMap);
+    }, 'insertCostoDirecto');
+  }
+
+  /// Obtiene todos los costos directos
+  Future<List<CostoDirecto>> getAllCostosDirectos({String? userId}) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'costos_directos',
+        where: userId != null ? 'user_id = ?' : null,
+        whereArgs: userId != null ? [userId] : null,
+        orderBy: 'fecha_creacion DESC',
+      );
+      return List.generate(maps.length, (i) => CostoDirecto.fromMap(maps[i]));
+    }, 'getAllCostosDirectos');
+  }
+
+  /// Obtiene un costo directo por ID
+  Future<CostoDirecto?> getCostoDirecto(int id) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'costos_directos',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (maps.isNotEmpty) {
+        return CostoDirecto.fromMap(maps.first);
+      }
+      return null;
+    }, 'getCostoDirecto');
+  }
+
+  /// Actualiza un costo directo existente
+  Future<int> updateCostoDirecto(CostoDirecto costo) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final costoMap = costo.toMap();
+      costoMap['updated_at'] = DateTime.now().toIso8601String();
+      return await db.update(
+        'costos_directos',
+        costoMap,
+        where: 'id = ?',
+        whereArgs: [costo.id],
+      );
+    }, 'updateCostoDirecto');
+  }
+
+  /// Elimina un costo directo
+  Future<int> deleteCostoDirecto(int id) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      return await db.delete(
+        'costos_directos',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }, 'deleteCostoDirecto');
+  }
+
+  // ==================== COSTOS INDIRECTOS ====================
+
+  /// Inserta un costo indirecto
+  Future<int> insertCostoIndirecto(CostoIndirecto costo, {String? userId}) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final costoMap = costo.toMap();
+      if (userId != null) {
+        costoMap['user_id'] = userId;
+      }
+      return await db.insert('costos_indirectos', costoMap);
+    }, 'insertCostoIndirecto');
+  }
+
+  /// Obtiene todos los costos indirectos
+  Future<List<CostoIndirecto>> getAllCostosIndirectos({String? userId}) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'costos_indirectos',
+        where: userId != null ? 'user_id = ?' : null,
+        whereArgs: userId != null ? [userId] : null,
+        orderBy: 'fecha_creacion DESC',
+      );
+      return List.generate(maps.length, (i) => CostoIndirecto.fromMap(maps[i]));
+    }, 'getAllCostosIndirectos');
+  }
+
+  /// Obtiene un costo indirecto por ID
+  Future<CostoIndirecto?> getCostoIndirecto(int id) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'costos_indirectos',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (maps.isNotEmpty) {
+        return CostoIndirecto.fromMap(maps.first);
+      }
+      return null;
+    }, 'getCostoIndirecto');
+  }
+
+  /// Actualiza un costo indirecto existente
+  Future<int> updateCostoIndirecto(CostoIndirecto costo) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final costoMap = costo.toMap();
+      costoMap['updated_at'] = DateTime.now().toIso8601String();
+      return await db.update(
+        'costos_indirectos',
+        costoMap,
+        where: 'id = ?',
+        whereArgs: [costo.id],
+      );
+    }, 'updateCostoIndirecto');
+  }
+
+  /// Elimina un costo indirecto
+  Future<int> deleteCostoIndirecto(int id) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      return await db.delete(
+        'costos_indirectos',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }, 'deleteCostoIndirecto');
   }
 
   // ==================== CLIENTES ====================
