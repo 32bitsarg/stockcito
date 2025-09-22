@@ -7,6 +7,7 @@ class AppTheme {
   static const Color successColor = Color(0xFF10B981); // Verde
   static const Color warningColor = Color(0xFFF59E0B); // Amarillo
   static const Color errorColor = Color(0xFFEF4444); // Rojo
+  static const Color infoColor = Color(0xFF3B82F6); // Azul información
   static const Color backgroundColor = Color(0xFFF8FAFC); // Gris muy claro
   static const Color surfaceColor = Color(0xFFFFFFFF); // Blanco
   static const Color textPrimary = Color(0xFF1F2937); // Gris oscuro

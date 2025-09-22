@@ -51,32 +51,61 @@ class AnimatedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget button = ElevatedButton.icon(
-      onPressed: isLoading ? null : onPressed,
-      icon: isLoading
-          ? SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  type == ButtonType.primary ? Colors.white : AppTheme.primaryColor,
+    Widget button;
+    
+    if (type == ButtonType.outline) {
+      button = OutlinedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
                 ),
-              ),
-            )
-          : icon != null
-              ? FaIcon(icon!, size: 16)
-              : const SizedBox.shrink(),
-      label: Text(text),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _getBackgroundColor(),
-        foregroundColor: _getTextColor(),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+              )
+            : icon != null
+                ? FaIcon(icon!, size: 16)
+                : const SizedBox.shrink(),
+        label: Text(text),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _getTextColor(),
+          side: const BorderSide(color: AppTheme.primaryColor),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      button = ElevatedButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        icon: isLoading
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    type == ButtonType.primary ? Colors.white : AppTheme.primaryColor,
+                  ),
+                ),
+              )
+            : icon != null
+                ? FaIcon(icon!, size: 16)
+                : const SizedBox.shrink(),
+        label: Text(text),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _getBackgroundColor(),
+          foregroundColor: _getTextColor(),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    }
 
     return button
         .animate()
@@ -96,6 +125,8 @@ class AnimatedButton extends StatelessWidget {
         return AppTheme.errorColor;
       case ButtonType.success:
         return AppTheme.successColor;
+      case ButtonType.outline:
+        return Colors.transparent;
     }
   }
 
@@ -106,6 +137,7 @@ class AnimatedButton extends StatelessWidget {
       case ButtonType.success:
         return Colors.white;
       case ButtonType.secondary:
+      case ButtonType.outline:
         return AppTheme.primaryColor;
     }
   }
@@ -339,4 +371,4 @@ class _AnimatedProgressIndicatorState extends State<AnimatedProgressIndicator>
   }
 }
 
-enum ButtonType { primary, secondary, danger, success }
+enum ButtonType { primary, secondary, danger, success, outline }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/producto.dart';
 import '../../services/datos/datos.dart';
 import '../../config/app_theme.dart';
-import '../calcularprecios_screen/modern_calculo_precio_screen.dart';
+import '../calcularprecios_screen/modern_calculadora_precios_screen.dart';
 import '../inventario_screen/widgets/editar_producto/editar_producto_screen.dart';
 import 'widgets/inventario_header_widget.dart';
 import 'widgets/inventario_filters_widget.dart';
@@ -156,7 +156,7 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(16),
-            child: const ModernCalculoPrecioScreen(showCloseButton: true),
+            child: const ModernCalculadoraPreciosScreen(showCloseButton: true),
           ),
         ),
       ),

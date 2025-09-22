@@ -7,6 +7,8 @@ import 'package:stockcito/services/ml/ml_consent_service.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
+import '../../screens/calcularprecios_screen/models/costo_directo.dart';
+import '../../screens/calcularprecios_screen/models/costo_indirecto.dart';
 import 'database/local_database_service.dart';
 
 /// Servicio centralizado para manejo de datos con sincronización optimizada
@@ -397,6 +399,272 @@ class DatosService {
       return true;
     } catch (e) {
       LoggingService.error('Error eliminando producto: $e');
+      return false;
+    }
+  }
+
+  // ==================== COSTOS DIRECTOS ====================
+
+  /// Obtiene todos los costos directos
+  Future<List<CostoDirecto>> getCostosDirectos() async {
+    try {
+      final userId = _currentUserId;
+      LoggingService.info('🔨 [DATOS] getCostosDirectos - userId: $userId');
+      
+      if (userId == null) {
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando obtener costos directos');
+        return [];
+      }
+
+      // Obtener de local
+      final costos = await _localDb.getAllCostosDirectos(userId: userId);
+      LoggingService.info('✅ [DATOS] ${costos.length} costos directos obtenidos de local');
+      
+      return costos;
+    } catch (e) {
+      LoggingService.error('❌ [DATOS] Error obteniendo costos directos: $e');
+      return [];
+    }
+  }
+
+  /// Guarda un costo directo (local + Supabase si está autenticado)
+  Future<bool> saveCostoDirecto(CostoDirecto costo) async {
+    try {
+      LoggingService.info('💾 [DATOS] Iniciando guardado de costo directo: ${costo.nombre}');
+      
+      final userId = _currentUserId;
+      if (userId == null) {
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando guardar costo directo');
+        return false;
+      }
+
+      // Validar acceso del usuario
+      if (!await _validateUserAccess(userId, 'save_costo_directo')) {
+        LoggingService.warning('⚠️ [DATOS] Acceso denegado para usuario $userId');
+        return false;
+      }
+
+      // Validar tamaño de datos
+      final costoMap = costo.toMap();
+      if (!_validateDataSize(costoMap)) {
+        LoggingService.warning('⚠️ [DATOS] Costo directo excede el tamaño máximo permitido');
+        return false;
+      }
+
+      // Sanitizar datos
+      final sanitizedData = _sanitizeData(costoMap);
+      final sanitizedCosto = CostoDirecto.fromMap(sanitizedData);
+
+      // Guardar en local primero
+      LoggingService.info('💾 [DATOS] Guardando costo directo en local para userId: $userId...');
+      final insertId = await _localDb.insertCostoDirecto(sanitizedCosto, userId: userId);
+      LoggingService.info('✅ [DATOS] Costo directo insertado en local con ID: $insertId');
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.create,
+          table: 'costos_directos',
+          data: _prepareCostoDirectoForSupabase(sanitizedCosto),
+        ));
+      } else {
+        LoggingService.info('👤 [DATOS] Usuario anónimo, solo guardado local');
+      }
+
+      // Invalidar cache del usuario
+      _invalidateUserCache(userId, 'costos_directos');
+      LoggingService.info('🗑️ [DATOS] Cache invalidado para usuario: $userId');
+      
+      LoggingService.info('✅ [DATOS] Costo directo guardado exitosamente para usuario $userId: ${sanitizedCosto.nombre}');
+      return true;
+    } catch (e, stackTrace) {
+      LoggingService.error('❌ [DATOS] Error guardando costo directo: $e', stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Actualiza un costo directo (local + Supabase si está autenticado)
+  Future<bool> updateCostoDirecto(CostoDirecto costo) async {
+    try {
+      // Actualizar en local
+      await _localDb.updateCostoDirecto(costo);
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.update,
+          table: 'costos_directos',
+          data: _prepareCostoDirectoForSupabase(costo),
+        ));
+      }
+
+      // Invalidar cache
+      _invalidateCache('costos_directos_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Costo directo actualizado: ${costo.nombre}');
+      return true;
+    } catch (e) {
+      LoggingService.error('Error actualizando costo directo: $e');
+      return false;
+    }
+  }
+
+  /// Elimina un costo directo (local + Supabase si está autenticado)
+  Future<bool> deleteCostoDirecto(int id) async {
+    try {
+      // Eliminar de local
+      await _localDb.deleteCostoDirecto(id);
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.delete,
+          table: 'costos_directos',
+          data: {'id': id},
+        ));
+      }
+
+      // Invalidar cache
+      _invalidateCache('costos_directos_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Costo directo eliminado: $id');
+      return true;
+    } catch (e) {
+      LoggingService.error('Error eliminando costo directo: $e');
+      return false;
+    }
+  }
+
+  // ==================== COSTOS INDIRECTOS ====================
+
+  /// Obtiene todos los costos indirectos
+  Future<List<CostoIndirecto>> getCostosIndirectos() async {
+    try {
+      final userId = _currentUserId;
+      LoggingService.info('🏠 [DATOS] getCostosIndirectos - userId: $userId');
+      
+      if (userId == null) {
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando obtener costos indirectos');
+        return [];
+      }
+
+      // Obtener de local
+      final costos = await _localDb.getAllCostosIndirectos(userId: userId);
+      LoggingService.info('✅ [DATOS] ${costos.length} costos indirectos obtenidos de local');
+      
+      return costos;
+    } catch (e) {
+      LoggingService.error('❌ [DATOS] Error obteniendo costos indirectos: $e');
+      return [];
+    }
+  }
+
+  /// Guarda un costo indirecto (local + Supabase si está autenticado)
+  Future<bool> saveCostoIndirecto(CostoIndirecto costo) async {
+    try {
+      LoggingService.info('💾 [DATOS] Iniciando guardado de costo indirecto: ${costo.nombre}');
+      
+      final userId = _currentUserId;
+      if (userId == null) {
+        LoggingService.warning('⚠️ [DATOS] Usuario no autenticado intentando guardar costo indirecto');
+        return false;
+      }
+
+      // Validar acceso del usuario
+      if (!await _validateUserAccess(userId, 'save_costo_indirecto')) {
+        LoggingService.warning('⚠️ [DATOS] Acceso denegado para usuario $userId');
+        return false;
+      }
+
+      // Validar tamaño de datos
+      final costoMap = costo.toMap();
+      if (!_validateDataSize(costoMap)) {
+        LoggingService.warning('⚠️ [DATOS] Costo indirecto excede el tamaño máximo permitido');
+        return false;
+      }
+
+      // Sanitizar datos
+      final sanitizedData = _sanitizeData(costoMap);
+      final sanitizedCosto = CostoIndirecto.fromMap(sanitizedData);
+
+      // Guardar en local primero
+      LoggingService.info('💾 [DATOS] Guardando costo indirecto en local para userId: $userId...');
+      final insertId = await _localDb.insertCostoIndirecto(sanitizedCosto, userId: userId);
+      LoggingService.info('✅ [DATOS] Costo indirecto insertado en local con ID: $insertId');
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.create,
+          table: 'costos_indirectos',
+          data: _prepareCostoIndirectoForSupabase(sanitizedCosto),
+        ));
+      } else {
+        LoggingService.info('👤 [DATOS] Usuario anónimo, solo guardado local');
+      }
+
+      // Invalidar cache del usuario
+      _invalidateUserCache(userId, 'costos_indirectos');
+      LoggingService.info('🗑️ [DATOS] Cache invalidado para usuario: $userId');
+      
+      LoggingService.info('✅ [DATOS] Costo indirecto guardado exitosamente para usuario $userId: ${sanitizedCosto.nombre}');
+      return true;
+    } catch (e, stackTrace) {
+      LoggingService.error('❌ [DATOS] Error guardando costo indirecto: $e', stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// Actualiza un costo indirecto (local + Supabase si está autenticado)
+  Future<bool> updateCostoIndirecto(CostoIndirecto costo) async {
+    try {
+      // Actualizar en local
+      await _localDb.updateCostoIndirecto(costo);
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.update,
+          table: 'costos_indirectos',
+          data: _prepareCostoIndirectoForSupabase(costo),
+        ));
+      }
+
+      // Invalidar cache
+      _invalidateCache('costos_indirectos_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Costo indirecto actualizado: ${costo.nombre}');
+      return true;
+    } catch (e) {
+      LoggingService.error('Error actualizando costo indirecto: $e');
+      return false;
+    }
+  }
+
+  /// Elimina un costo indirecto (local + Supabase si está autenticado)
+  Future<bool> deleteCostoIndirecto(int id) async {
+    try {
+      // Eliminar de local
+      await _localDb.deleteCostoIndirecto(id);
+      
+      // Si está autenticado, agregar a cola de sincronización
+      if (_isSignedIn && !_isAnonymous) {
+        _addToSyncQueue(SyncOperation(
+          type: SyncType.delete,
+          table: 'costos_indirectos',
+          data: {'id': id},
+        ));
+      }
+
+      // Invalidar cache
+      _invalidateCache('costos_indirectos_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Costo indirecto eliminado: $id');
+      return true;
+    } catch (e) {
+      LoggingService.error('Error eliminando costo indirecto: $e');
       return false;
     }
   }
@@ -934,6 +1202,24 @@ class DatosService {
     final data = producto.toMap();
     data['user_id'] = _currentUserId;
     data['created_at'] = producto.fechaCreacion.toIso8601String();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    return data;
+  }
+
+  /// Prepara un costo directo para Supabase
+  Map<String, dynamic> _prepareCostoDirectoForSupabase(CostoDirecto costo) {
+    final data = costo.toMap();
+    data['user_id'] = _currentUserId;
+    data['created_at'] = costo.fechaCreacion.toIso8601String();
+    data['updated_at'] = DateTime.now().toIso8601String();
+    return data;
+  }
+
+  /// Prepara un costo indirecto para Supabase
+  Map<String, dynamic> _prepareCostoIndirectoForSupabase(CostoIndirecto costo) {
+    final data = costo.toMap();
+    data['user_id'] = _currentUserId;
+    data['created_at'] = costo.fechaCreacion.toIso8601String();
     data['updated_at'] = DateTime.now().toIso8601String();
     return data;
   }
