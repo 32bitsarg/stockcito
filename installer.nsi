@@ -2,7 +2,7 @@
 ; Generado automáticamente para Flutter Windows
 
 !define APP_NAME "Stockcito"
-!define APP_VERSION "1.0.2"
+!define APP_VERSION "1.1.0-alpha.1"
 !define APP_PUBLISHER "32bitsarg"
 !define APP_EXE "stockcito.exe"
 !define APP_ICON "stockcito.exe"
