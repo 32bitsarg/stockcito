@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../models/producto.dart';
+import '../../models/categoria.dart';
+import '../../models/talla.dart';
 import '../../services/datos/datos.dart';
 import '../../config/app_theme.dart';
-import '../calcularprecios_screen/modern_calculadora_precios_screen.dart';
 import '../inventario_screen/widgets/editar_producto/editar_producto_screen.dart';
 import 'widgets/inventario_header_widget.dart';
 import 'widgets/inventario_filters_widget.dart';
 import 'widgets/inventario_list_widget.dart';
+import 'widgets/gestion_categorias/gestion_categorias_modal.dart';
+import 'widgets/gestion_tallas/gestion_tallas_modal.dart';
 import 'functions/inventario_functions.dart';
 
 class ModernInventarioScreen extends StatefulWidget {
@@ -16,39 +19,41 @@ class ModernInventarioScreen extends StatefulWidget {
   State<ModernInventarioScreen> createState() => _ModernInventarioScreenState();
 }
 
-class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
+class _ModernInventarioScreenState extends State<ModernInventarioScreen> with WidgetsBindingObserver {
   final DatosService _datosService = DatosService();
   List<Producto> _productos = [];
+  List<Categoria> _categorias = [];
+  List<Talla> _tallas = [];
   String _filtroCategoria = 'Todas';
   String _filtroTalla = 'Todas';
   String _busqueda = '';
   bool _mostrarSoloStockBajo = false;
   bool _cargando = false;
-  
-  final List<String> _categorias = [
-    'Todas',
-    'Bodies',
-    'Conjuntos',
-    'Vestidos',
-    'Pijamas',
-    'Gorros',
-    'Accesorios',
-  ];
 
-  final List<String> _tallas = [
-    'Todas',
-    '0-3 meses',
-    '3-6 meses',
-    '6-12 meses',
-    '12-18 meses',
-    '18-24 meses',
-  ];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProductos();
+    _loadCategorias();
+    _loadTallas();
     _cargarDatosUsuario();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Recargar datos cuando la app vuelve a estar activa
+      _loadCategorias();
+      _loadTallas();
+    }
   }
 
   Future<void> _loadProductos() async {
@@ -67,6 +72,28 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
         _cargando = false;
       });
       print('Error cargando productos: $e');
+    }
+  }
+
+  Future<void> _loadCategorias() async {
+    try {
+      final categorias = await _datosService.getCategorias();
+      setState(() {
+        _categorias = categorias;
+      });
+    } catch (e) {
+      print('Error cargando categorías: $e');
+    }
+  }
+
+  Future<void> _loadTallas() async {
+    try {
+      final tallas = await _datosService.getTallas();
+      setState(() {
+        _tallas = tallas;
+      });
+    } catch (e) {
+      print('Error cargando tallas: $e');
     }
   }
 
@@ -90,6 +117,36 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
     );
   }
 
+  void _abrirGestionCategorias() {
+    showDialog(
+      context: context,
+      builder: (context) => GestionCategoriasModal(
+        categorias: _categorias,
+        productos: _productos,
+        onCategoriasChanged: (nuevasCategorias) {
+          setState(() {
+            _categorias = nuevasCategorias;
+          });
+        },
+      ),
+    );
+  }
+
+  void _abrirGestionTallas() {
+    showDialog(
+      context: context,
+      builder: (context) => GestionTallasModal(
+        tallas: _tallas,
+        productos: _productos,
+        onTallasChanged: (nuevasTallas) {
+          setState(() {
+            _tallas = nuevasTallas;
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,8 +159,38 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
             // Header con estadísticas
             InventarioHeaderWidget(
               productos: _productosFiltrados,
-              onNuevoProducto: _nuevoProducto,
             ),
+            
+            // Debug buttons (ocultos - disponibles para debug futuro)
+            // Container(
+            //   margin: const EdgeInsets.symmetric(vertical: 8),
+            //   child: Row(
+            //     children: [
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           print('🔄 Forzando recarga de categorías y tallas...');
+            //           await _loadCategorias();
+            //           await _loadTallas();
+            //         },
+            //         child: const Text('🔄 Recargar'),
+            //       ),
+            //       const SizedBox(width: 8),
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           print('🗑️ Reseteando base de datos...');
+            //           await DebugResetDatabase.resetAndReloadDefaults();
+            //           await _loadCategorias();
+            //           await _loadTallas();
+            //         },
+            //         style: ElevatedButton.styleFrom(
+            //           backgroundColor: Colors.red,
+            //           foregroundColor: Colors.white,
+            //         ),
+            //         child: const Text('🗑️ Reset DB'),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             const SizedBox(height: 24),
             
             // Filtros
@@ -118,6 +205,8 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
               onTallaChanged: (talla) => setState(() => _filtroTalla = talla),
               onBusquedaChanged: (busqueda) => setState(() => _busqueda = busqueda),
               onStockBajoChanged: (mostrar) => setState(() => _mostrarSoloStockBajo = mostrar),
+              onGestionCategorias: _abrirGestionCategorias,
+              onGestionTallas: _abrirGestionTallas,
             ),
             const SizedBox(height: 24),
             
@@ -134,37 +223,6 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> {
     );
   }
 
-  void _nuevoProducto() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: BoxDecoration(
-            color: AppTheme.backgroundColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: const ModernCalculadoraPreciosScreen(showCloseButton: true),
-          ),
-        ),
-      ),
-    ).then((_) {
-      // Recargar productos cuando regrese
-      _loadProductos();
-    });
-  }
 
   void _editarProducto(Producto producto) {
     showDialog(
