@@ -2,17 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/producto.dart';
-import '../../../widgets/animated_widgets.dart';
 import '../functions/inventario_functions.dart';
 
 class InventarioHeaderWidget extends StatelessWidget {
   final List<Producto> productos;
-  final VoidCallback onNuevoProducto;
 
   const InventarioHeaderWidget({
     super.key,
     required this.productos,
-    required this.onNuevoProducto,
   });
 
   @override
@@ -77,12 +74,6 @@ class InventarioHeaderWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              AnimatedButton(
-                text: 'Nuevo Producto',
-                type: ButtonType.primary,
-                onPressed: onNuevoProducto,
-                icon: FontAwesomeIcons.plus,
               ),
             ],
           ),

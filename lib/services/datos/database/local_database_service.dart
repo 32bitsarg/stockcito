@@ -4,6 +4,8 @@ import 'dart:io';
 import '../../../models/producto.dart';
 import '../../../models/venta.dart';
 import '../../../models/cliente.dart';
+import '../../../models/categoria.dart';
+import '../../../models/talla.dart';
 import '../../../screens/calcularprecios_screen/models/costo_directo.dart';
 import '../../../screens/calcularprecios_screen/models/costo_indirecto.dart';
 import 'package:stockcito/services/system/logging_service.dart';
@@ -65,7 +67,7 @@ class LocalDatabaseService {
 
       return await openDatabase(
         path,
-        version: 5,
+        version: 7,
         onCreate: _createTables,
         onUpgrade: _upgradeDatabase,
       );
@@ -169,6 +171,35 @@ class LocalDatabaseService {
           costo_mensual REAL NOT NULL,
           productos_estimados_mensuales INTEGER NOT NULL,
           descripcion TEXT,
+          fecha_creacion TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // Tabla de categorías
+      await db.execute('''
+        CREATE TABLE categorias (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          nombre TEXT NOT NULL,
+          color TEXT NOT NULL,
+          icono TEXT NOT NULL,
+          descripcion TEXT,
+          is_default INTEGER NOT NULL DEFAULT 0,
+          fecha_creacion TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // Tabla de tallas
+      await db.execute('''
+        CREATE TABLE tallas (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id TEXT NOT NULL,
+          nombre TEXT NOT NULL,
+          descripcion TEXT,
+          orden INTEGER NOT NULL DEFAULT 0,
+          is_default INTEGER NOT NULL DEFAULT 0,
           fecha_creacion TEXT NOT NULL,
           updated_at TEXT NOT NULL
         )
@@ -345,6 +376,59 @@ class LocalDatabaseService {
         LoggingService.info('Migración de base de datos v4 a v5 completada - Tablas de costos creadas');
       } catch (e) {
         LoggingService.error('Error en migración v4 a v5: $e');
+        rethrow;
+      }
+    }
+
+    if (oldVersion < 6) {
+      // Migración de versión 5 a 6 - Agregar tabla de categorías
+      LoggingService.info('Ejecutando migración de base de datos de v5 a v6 - Agregando tabla de categorías');
+      
+      try {
+        // Crear tabla de categorías
+        await db.execute('''
+          CREATE TABLE categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            nombre TEXT NOT NULL,
+            color TEXT NOT NULL,
+            icono TEXT NOT NULL,
+            descripcion TEXT,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            fecha_creacion TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+        
+        LoggingService.info('Migración de base de datos v5 a v6 completada - Tabla de categorías creada');
+      } catch (e) {
+        LoggingService.error('Error en migración v5 a v6: $e');
+        rethrow;
+      }
+    }
+
+    if (oldVersion < 7) {
+      // Migración de versión 6 a 7 - Agregar tabla de tallas
+      LoggingService.info('Ejecutando migración de base de datos de v6 a v7 - Agregando tabla de tallas');
+      
+      try {
+        // Crear tabla de tallas
+        await db.execute('''
+          CREATE TABLE tallas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            nombre TEXT NOT NULL,
+            descripcion TEXT,
+            orden INTEGER NOT NULL DEFAULT 0,
+            is_default INTEGER NOT NULL DEFAULT 0,
+            fecha_creacion TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          )
+        ''');
+        
+        LoggingService.info('Migración de base de datos v6 a v7 completada - Tabla de tallas creada');
+      } catch (e) {
+        LoggingService.error('Error en migración v6 a v7: $e');
         rethrow;
       }
     }
@@ -1020,6 +1104,192 @@ class LocalDatabaseService {
       
       LoggingService.info('Datos de prueba inicializados correctamente');
     }, 'initializeSampleData');
+  }
+
+  // ==================== MÉTODOS PARA CATEGORÍAS ====================
+
+  /// Inserta una nueva categoría
+  Future<int> insertCategoria(Categoria categoria) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        return await db.insert('categorias', categoria.toMap());
+      },
+      'insertCategoria',
+    );
+  }
+
+  /// Obtiene todas las categorías
+  Future<List<Categoria>> getAllCategorias() async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final maps = await db.query(
+          'categorias',
+          orderBy: 'fecha_creacion ASC',
+        );
+        return List.generate(maps.length, (i) => Categoria.fromMap(maps[i]));
+      },
+      'getAllCategorias',
+      defaultValue: <Categoria>[],
+    );
+  }
+
+  /// Obtiene una categoría por ID
+  Future<Categoria?> getCategoria(int id) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final maps = await db.query(
+          'categorias',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        if (maps.isNotEmpty) {
+          return Categoria.fromMap(maps.first);
+        }
+        return null;
+      },
+      'getCategoria',
+    );
+  }
+
+  /// Actualiza una categoría existente
+  Future<int> updateCategoria(Categoria categoria) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        return await db.update(
+          'categorias',
+          categoria.toMap(),
+          where: 'id = ?',
+          whereArgs: [categoria.id],
+        );
+      },
+      'updateCategoria',
+    );
+  }
+
+  /// Elimina una categoría
+  Future<int> deleteCategoria(int id) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        return await db.delete(
+          'categorias',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      },
+      'deleteCategoria',
+    );
+  }
+
+  // ==================== MÉTODOS PARA TALLAS ====================
+
+  /// Inserta una nueva talla
+  Future<int> insertTalla(Talla talla) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final map = talla.toMap();
+        print('🗄️ LocalDatabaseService: Insertando talla con map: $map');
+        print('🗄️ LocalDatabaseService: Map contiene id: ${map.containsKey('id')}');
+        if (map.containsKey('id')) {
+          print('🗄️ LocalDatabaseService: ID en map: ${map['id']}');
+        }
+        return await db.insert('tallas', map);
+      },
+      'insertTalla',
+    );
+  }
+
+  /// Obtiene todas las tallas
+  Future<List<Talla>> getAllTallas() async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final maps = await db.query(
+          'tallas',
+          orderBy: 'orden ASC, nombre ASC',
+        );
+        return List.generate(maps.length, (i) => Talla.fromMap(maps[i]));
+      },
+      'getAllTallas',
+      defaultValue: <Talla>[],
+    );
+  }
+
+  /// Obtiene una talla por ID
+  Future<Talla?> getTalla(int id) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        final maps = await db.query(
+          'tallas',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        if (maps.isNotEmpty) {
+          return Talla.fromMap(maps.first);
+        }
+        return null;
+      },
+      'getTalla',
+    );
+  }
+
+  /// Actualiza una talla existente
+  Future<int> updateTalla(Talla talla) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        return await db.update(
+          'tallas',
+          talla.toMap(),
+          where: 'id = ?',
+          whereArgs: [talla.id],
+        );
+      },
+      'updateTalla',
+    );
+  }
+
+  /// Elimina una talla
+  Future<int> deleteTalla(int id) async {
+    return await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        return await db.delete(
+          'tallas',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      },
+      'deleteTalla',
+    );
+  }
+
+  /// Elimina todas las categorías (solo para debug)
+  Future<void> deleteAllCategorias() async {
+    await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        await db.delete('categorias');
+      },
+      'deleteAllCategorias',
+    );
+  }
+
+  /// Elimina todas las tallas (solo para debug)
+  Future<void> deleteAllTallas() async {
+    await _handleDatabaseOperation(
+      () async {
+        final db = await database;
+        await db.delete('tallas');
+      },
+      'deleteAllTallas',
+    );
   }
 
   /// Cierra la conexión a la base de datos

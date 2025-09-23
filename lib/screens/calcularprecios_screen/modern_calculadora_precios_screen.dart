@@ -37,9 +37,13 @@ class _ModernCalculadoraPreciosScreenState extends State<ModernCalculadoraPrecio
   }
 
   Future<void> _initializeService() async {
-    await _calculadoraService.initialize();
-    if (mounted) {
-      setState(() {});
+    try {
+      await _calculadoraService.initialize();
+      if (mounted) {
+        setState(() {});
+      }
+    } catch (e) {
+      print('Error inicializando CalculadoraService: $e');
     }
   }
 
@@ -53,6 +57,21 @@ class _ModernCalculadoraPreciosScreenState extends State<ModernCalculadoraPrecio
           CalculadoraHeader(
             onClose: widget.showCloseButton ? () => Navigator.pop(context) : null,
           ),
+          
+          // Debug button (oculto - disponible para debug futuro)
+          // Container(
+          //   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          //   child: ElevatedButton(
+          //     onPressed: () async {
+          //       print('🔄 Debug: Probando carga de categorías y tallas...');
+          //       final categorias = await _calculadoraService.getCategoriasAsStrings();
+          //       final tallas = await _calculadoraService.getTallasAsStrings();
+          //       print('📊 Debug: Categorías: ${categorias.length} - $categorias');
+          //       print('📊 Debug: Tallas: ${tallas.length} - $tallas');
+          //     },
+          //     child: const Text('🔄 Debug Categorías/Tallas'),
+          //   ),
+          // ),
           
           // Contenido principal
           Expanded(

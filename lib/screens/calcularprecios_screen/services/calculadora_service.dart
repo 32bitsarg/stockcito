@@ -7,6 +7,8 @@ import '../models/costo_directo.dart';
 import '../models/costo_indirecto.dart';
 import '../../../services/system/logging_service.dart';
 import '../../../services/datos/datos.dart';
+import '../../../models/categoria.dart';
+import '../../../models/talla.dart';
 import 'global_config_service.dart';
 
 /// Servicio para manejar la calculadora de precios
@@ -28,6 +30,72 @@ class CalculadoraService {
 
   /// Obtiene el estado actual
   CalculadoraState? get currentState => _currentState;
+
+  /// Obtiene las categorías dinámicas del usuario
+  Future<List<Categoria>> getCategorias() async {
+    try {
+      return await _datosService.getCategorias();
+    } catch (e) {
+      LoggingService.error('Error obteniendo categorías: $e');
+      return [];
+    }
+  }
+
+  /// Obtiene las tallas dinámicas del usuario
+  Future<List<Talla>> getTallas() async {
+    try {
+      return await _datosService.getTallas();
+    } catch (e) {
+      LoggingService.error('Error obteniendo tallas: $e');
+      return [];
+    }
+  }
+
+  /// Obtiene las categorías como lista de strings para compatibilidad
+  Future<List<String>> getCategoriasAsStrings() async {
+    try {
+      final categorias = await getCategorias();
+      // Deduplicar categorías por nombre para evitar errores en dropdowns
+      final categoriasUnicas = <String>{};
+      final categoriasDeduplicadas = <String>[];
+      
+      for (final categoria in categorias) {
+        if (!categoriasUnicas.contains(categoria.nombre)) {
+          categoriasUnicas.add(categoria.nombre);
+          categoriasDeduplicadas.add(categoria.nombre);
+        }
+      }
+      
+      return categoriasDeduplicadas;
+    } catch (e) {
+      LoggingService.error('Error obteniendo categorías como strings: $e');
+      // Fallback a categorías estáticas
+      return ProductoCalculo.getCategoriasPorTipo(_config.tipoNegocio);
+    }
+  }
+
+  /// Obtiene las tallas como lista de strings para compatibilidad
+  Future<List<String>> getTallasAsStrings() async {
+    try {
+      final tallas = await getTallas();
+      // Deduplicar tallas por nombre para evitar errores en dropdowns
+      final tallasUnicas = <String>{};
+      final tallasDeduplicadas = <String>[];
+      
+      for (final talla in tallas) {
+        if (!tallasUnicas.contains(talla.nombre)) {
+          tallasUnicas.add(talla.nombre);
+          tallasDeduplicadas.add(talla.nombre);
+        }
+      }
+      
+      return tallasDeduplicadas;
+    } catch (e) {
+      LoggingService.error('Error obteniendo tallas como strings: $e');
+      // Fallback a tallas estáticas
+      return ProductoCalculo.getTallasPorTipo(_config.tipoNegocio);
+    }
+  }
 
   /// Inicializa el servicio
   Future<void> initialize() async {

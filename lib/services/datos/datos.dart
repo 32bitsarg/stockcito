@@ -7,9 +7,13 @@ import 'package:stockcito/services/ml/ml_consent_service.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
+import '../../models/categoria.dart';
+import '../../models/talla.dart';
 import '../../screens/calcularprecios_screen/models/costo_directo.dart';
 import '../../screens/calcularprecios_screen/models/costo_indirecto.dart';
 import 'database/local_database_service.dart';
+import 'categoria_service.dart';
+import 'talla_service.dart';
 
 /// Servicio centralizado para manejo de datos con sincronización optimizada
 class DatosService {
@@ -20,6 +24,8 @@ class DatosService {
   SupabaseAuthService? _authService;
   MLTrainingService? _mlTrainingService;
   MLConsentService? _consentService;
+  final CategoriaService _categoriaService = CategoriaService();
+  final TallaService _tallaService = TallaService();
   
   /// Inicializa el servicio de autenticación (inyección de dependencia)
   void initializeAuthService(SupabaseAuthService authService) {
@@ -1843,6 +1849,50 @@ class DatosService {
       await _loadUserData();
       await _processSyncQueue();
     }
+  }
+
+  // ==================== MÉTODOS PARA CATEGORÍAS ====================
+
+  /// Obtiene todas las categorías
+  Future<List<Categoria>> getCategorias() async {
+    return await _categoriaService.getCategorias();
+  }
+
+  /// Guarda una nueva categoría
+  Future<Categoria> saveCategoria(Categoria categoria) async {
+    return await _categoriaService.saveCategoria(categoria);
+  }
+
+  /// Actualiza una categoría existente
+  Future<Categoria> updateCategoria(Categoria categoria) async {
+    return await _categoriaService.updateCategoria(categoria);
+  }
+
+  /// Elimina una categoría
+  Future<void> deleteCategoria(int id) async {
+    return await _categoriaService.deleteCategoria(id);
+  }
+
+  // ==================== MÉTODOS PARA TALLAS ====================
+
+  /// Obtiene todas las tallas
+  Future<List<Talla>> getTallas() async {
+    return await _tallaService.getTallas();
+  }
+
+  /// Guarda una nueva talla
+  Future<Talla> saveTalla(Talla talla) async {
+    return await _tallaService.saveTalla(talla);
+  }
+
+  /// Actualiza una talla existente
+  Future<Talla> updateTalla(Talla talla) async {
+    return await _tallaService.updateTalla(talla);
+  }
+
+  /// Elimina una talla
+  Future<void> deleteTalla(int id) async {
+    return await _tallaService.deleteTalla(id);
   }
 }
 

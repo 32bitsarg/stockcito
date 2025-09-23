@@ -98,6 +98,8 @@ class ProductoCalculo {
   }
 
   /// Obtiene las categorías disponibles por tipo de negocio
+  /// NOTA: Este método estático se mantiene para compatibilidad,
+  /// pero ahora se recomienda usar las categorías dinámicas del servicio
   static List<String> getCategoriasPorTipo(String tipoNegocio) {
     switch (tipoNegocio) {
       case 'textil':
@@ -148,6 +150,8 @@ class ProductoCalculo {
   }
 
   /// Obtiene las tallas disponibles por tipo de negocio
+  /// NOTA: Este método estático se mantiene para compatibilidad,
+  /// pero ahora se recomienda usar las tallas dinámicas del servicio
   static List<String> getTallasPorTipo(String tipoNegocio) {
     switch (tipoNegocio) {
       case 'textil':

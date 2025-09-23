@@ -24,11 +24,37 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
   late ProductoCalculo _producto;
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  List<String> _categorias = [];
+  List<String> _tallas = [];
 
   @override
   void initState() {
     super.initState();
     _producto = widget.calculadoraService.currentState?.producto ?? ProductoCalculo.empty();
+    _loadCategoriasYTallas();
+  }
+
+  /// Carga las categorías y tallas dinámicas
+  Future<void> _loadCategoriasYTallas() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final categorias = await widget.calculadoraService.getCategoriasAsStrings();
+      final tallas = await widget.calculadoraService.getTallasAsStrings();
+      
+      setState(() {
+        _categorias = categorias;
+        _tallas = tallas;
+      });
+    } catch (e) {
+      print('Error cargando categorías y tallas: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -43,9 +69,13 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Título del paso
-            _buildStepHeader(),
-            const SizedBox(height: 24),
+          // Título del paso
+          _buildStepHeader(),
+          const SizedBox(height: 16),
+          
+          // Indicador de carga y botón de recarga
+          _buildLoadingIndicator(),
+          const SizedBox(height: 24),
             
             // Contenido scrolleable
             Expanded(
@@ -158,7 +188,7 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
                 child: _buildDropdownField(
                   label: 'Categoría',
                   value: _producto.categoria,
-                  items: ProductoCalculo.getCategoriasPorTipo(_producto.tipoNegocio),
+                  items: _categorias,
                   onChanged: (value) => _updateProducto(categoria: value ?? ''),
                 ),
               ),
@@ -171,7 +201,7 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
                 child: _buildDropdownField(
                   label: 'Talla',
                   value: _producto.talla,
-                  items: ProductoCalculo.getTallasPorTipo(_producto.tipoNegocio),
+                  items: _tallas,
                   onChanged: (value) => _updateProducto(talla: value ?? ''),
                 ),
               ),
@@ -407,6 +437,56 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
     } else {
       return _producto.isValidSimple;
     }
+  }
+
+  /// Construye el indicador de carga y botón de recarga
+  Widget _buildLoadingIndicator() {
+    return Row(
+      children: [
+        if (_isLoading) ...[
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryColor),
+            ),
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Cargando categorías y tallas...',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ] else ...[
+          Icon(
+            FontAwesomeIcons.checkCircle,
+            size: 16,
+            color: AppTheme.successColor,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Categorías y tallas actualizadas',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.successColor,
+            ),
+          ),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: _loadCategoriasYTallas,
+            icon: const Icon(FontAwesomeIcons.arrowsRotate, size: 12),
+            label: const Text('Recargar'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryColor,
+              textStyle: const TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Future<void> _updateProducto({
