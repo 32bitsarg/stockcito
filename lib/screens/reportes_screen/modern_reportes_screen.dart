@@ -13,6 +13,12 @@ import 'widgets/reportes_analisis_categoria.dart';
 // Importar funciones
 import 'functions/reportes_functions.dart';
 
+// Importar widgets de detalle
+import 'widgets/producto_detail_modal.dart';
+
+// Importar pantalla de edición
+import '../inventario_screen/widgets/editar_producto/editar_producto_screen.dart';
+
 class ModernReportesScreen extends StatefulWidget {
   const ModernReportesScreen({super.key});
 
@@ -25,11 +31,13 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
   List<Producto> _productos = []; // Mantenido para métricas
   String _filtroCategoria = 'Todas';
   String _filtroTalla = 'Todas';
+  Map<String, dynamic>? _metricasCompletas;
 
   @override
   void initState() {
     super.initState();
     _loadProductos();
+    _loadMetricasCompletas();
   }
 
   Future<void> _loadProductos() async {
@@ -40,7 +48,20 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
         _productos = productos;
       });
     } catch (e) {
-      print('Error cargando productos para reportes: $e');
+      // Error manejado silenciosamente - los productos se cargarán cuando sea necesario
+    }
+  }
+
+  Future<void> _loadMetricasCompletas() async {
+    try {
+      final metricas = await ReportesFunctions.calcularMetricasCompletas(
+        productos: _productos,
+      );
+      setState(() {
+        _metricasCompletas = metricas;
+      });
+    } catch (e) {
+      // Error manejado silenciosamente - se usarán métricas básicas
     }
   }
 
@@ -260,23 +281,43 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
   }
 
   void _verDetalleProducto(Producto producto) {
-    // TODO: Implementar vista de detalle de producto
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ver detalle de: ${producto.nombre}'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    ProductoDetailModal.show(context, producto);
   }
 
   void _editarProducto(Producto producto) {
-    // TODO: Implementar edición de producto desde reportes
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editar: ${producto.nombre}'),
-        duration: const Duration(seconds: 2),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: BoxDecoration(
+            color: AppTheme.backgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: EditarProductoScreen(
+              producto: producto,
+              showCloseButton: true,
+            ),
+          ),
+        ),
       ),
-    );
+    ).then((_) {
+      // Recargar productos y métricas cuando regrese de la edición
+      _loadProductos();
+      _loadMetricasCompletas();
+    });
   }
 
   Map<String, double> get _valorPorCategoria {
@@ -309,7 +350,11 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header con estadísticas
-            ReportesHeader(onExportarPDF: _exportarPDF),
+            ReportesHeader(
+              onExportarPDF: _exportarPDF,
+              onExportarCSV: _exportarCSV,
+              onExportarJSON: _exportarJSON,
+            ),
             const SizedBox(height: 24),
             // Filtros
             ReportesFiltros(
@@ -390,6 +435,47 @@ class _ModernReportesScreenState extends State<ModernReportesScreen> {
         margenPromedio: _margenPromedio,
         nombreArchivo: 'reporte_inventario_${DateTime.now().millisecondsSinceEpoch}.pdf',
       );
+    } catch (e) {
+      if (mounted) {
+        ReportesFunctions.showErrorSnackBar(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _exportarCSV() async {
+    try {
+      final filePath = await ReportesFunctions.exportarProductosCSV(_productosFiltrados);
+      if (mounted) {
+        ReportesFunctions.showExportSuccessDialog(context, filePath);
+      }
+    } catch (e) {
+      if (mounted) {
+        ReportesFunctions.showErrorSnackBar(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _exportarJSON() async {
+    try {
+      final metricas = _metricasCompletas ?? {
+        'productos': {
+          'total': _totalProductos,
+          'stock_bajo': _stockBajo,
+          'valor_inventario': _valorTotalInventario,
+        },
+        'ventas': {'total': 0, 'valor_total': 0.0, 'ultimos_30_dias': 0},
+        'clientes': {'total': 0, 'activos': 0, 'promedio_compra': 0.0},
+        'metricas_combinadas': {'rotacion_inventario': 0.0, 'promedio_venta_cliente': 0.0},
+        'fecha_generacion': DateTime.now().toIso8601String(),
+      };
+      
+      final filePath = await ReportesFunctions.exportarReporteCompletoJSON(
+        productos: _productosFiltrados,
+        metricas: metricas,
+      );
+      if (mounted) {
+        ReportesFunctions.showExportSuccessDialog(context, filePath);
+      }
     } catch (e) {
       if (mounted) {
         ReportesFunctions.showErrorSnackBar(context, e.toString());

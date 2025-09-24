@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/producto.dart';
 import '../../../services/system/export_service.dart';
+import '../../../services/datos/datos.dart';
 
 class ReportesFunctions {
   /// Filtra productos por categoría y talla
@@ -285,13 +286,108 @@ class ReportesFunctions {
     required List<Producto> productos,
     required Map<String, dynamic> metricas,
   }) async {
-    final exportService = ExportService();
-    return await exportService.exportReporteCompletoToJSON(
-      productos: productos,
-      ventas: [], // TODO: Agregar ventas cuando estén disponibles
-      clientes: [], // TODO: Agregar clientes cuando estén disponibles
-      metricas: metricas,
-    );
+    try {
+      final datosService = DatosService();
+      
+      // Cargar ventas y clientes para el reporte completo
+      final ventas = await datosService.getVentas();
+      final clientes = await datosService.getClientes();
+      
+      final exportService = ExportService();
+      return await exportService.exportReporteCompletoToJSON(
+        productos: productos,
+        ventas: ventas,
+        clientes: clientes,
+        metricas: metricas,
+      );
+    } catch (e) {
+      // Si hay error cargando ventas/clientes, exportar solo productos
+      final exportService = ExportService();
+      return await exportService.exportReporteCompletoToJSON(
+        productos: productos,
+        ventas: [],
+        clientes: [],
+        metricas: metricas,
+      );
+    }
+  }
+
+  /// Calcula métricas combinadas incluyendo ventas y clientes
+  static Future<Map<String, dynamic>> calcularMetricasCompletas({
+    required List<Producto> productos,
+  }) async {
+    try {
+      final datosService = DatosService();
+      final ventas = await datosService.getVentas();
+      final clientes = await datosService.getClientes();
+      
+      // Métricas de productos
+      final valorTotalInventario = getValorTotalInventario(productos);
+      final totalProductos = productos.length;
+      final productosStockBajo = productos.where((p) => p.stock <= 5).length;
+      
+      // Métricas de ventas
+      final totalVentas = ventas.length;
+      final valorTotalVentas = ventas.fold<double>(0, (sum, v) => sum + v.total);
+      final ventasUltimos30Dias = ventas.where((v) => 
+        DateTime.now().difference(v.fecha).inDays <= 30).length;
+      
+      // Métricas de clientes
+      final totalClientes = clientes.length;
+      final clientesActivos = clientes.where((c) => c.totalCompras > 0).length;
+      
+      // Métricas combinadas
+      final rotacionInventario = totalVentas > 0 ? valorTotalVentas / valorTotalInventario : 0.0;
+      final promedioVentaPorCliente = totalClientes > 0 ? valorTotalVentas / totalClientes : 0.0;
+      
+      return {
+        'productos': {
+          'total': totalProductos,
+          'stock_bajo': productosStockBajo,
+          'valor_inventario': valorTotalInventario,
+        },
+        'ventas': {
+          'total': totalVentas,
+          'valor_total': valorTotalVentas,
+          'ultimos_30_dias': ventasUltimos30Dias,
+        },
+        'clientes': {
+          'total': totalClientes,
+          'activos': clientesActivos,
+          'promedio_compra': promedioVentaPorCliente,
+        },
+        'metricas_combinadas': {
+          'rotacion_inventario': rotacionInventario,
+          'promedio_venta_cliente': promedioVentaPorCliente,
+        },
+        'fecha_generacion': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      // Si hay error, retornar métricas básicas solo de productos
+      return {
+        'productos': {
+          'total': productos.length,
+          'stock_bajo': productos.where((p) => p.stock <= 5).length,
+          'valor_inventario': getValorTotalInventario(productos),
+        },
+        'ventas': {
+          'total': 0,
+          'valor_total': 0.0,
+          'ultimos_30_dias': 0,
+        },
+        'clientes': {
+          'total': 0,
+          'activos': 0,
+          'promedio_compra': 0.0,
+        },
+        'metricas_combinadas': {
+          'rotacion_inventario': 0.0,
+          'promedio_venta_cliente': 0.0,
+        },
+        'fecha_generacion': DateTime.now().toIso8601String(),
+        'error': 'No se pudieron cargar ventas y clientes',
+      };
+    }
   }
 
   /// Muestra diálogo de exportación exitosa
