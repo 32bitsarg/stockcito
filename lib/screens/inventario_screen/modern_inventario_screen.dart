@@ -14,6 +14,7 @@ import 'functions/inventario_functions.dart';
 import '../../widgets/connectivity_status_widget.dart';
 import '../../widgets/sync_status_widget.dart';
 import '../../widgets/lazy_list_widget.dart';
+import '../../services/system/logging_service.dart';
 
 class ModernInventarioScreen extends StatefulWidget {
   const ModernInventarioScreen({super.key});
@@ -37,25 +38,15 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
   @override
   void initState() {
     super.initState();
-    print('🚀 [MODERN INVENTARIO] initState() llamado');
     try {
       WidgetsBinding.instance.addObserver(this);
-      print('✅ [MODERN INVENTARIO] WidgetsBinding observer agregado');
       
       _loadProductos();
-      print('✅ [MODERN INVENTARIO] _loadProductos() llamado');
-      
       _loadCategorias();
-      print('✅ [MODERN INVENTARIO] _loadCategorias() llamado');
-      
       _loadTallas();
-      print('✅ [MODERN INVENTARIO] _loadTallas() llamado');
-      
       _cargarDatosUsuario();
-      print('✅ [MODERN INVENTARIO] _cargarDatosUsuario() llamado');
     } catch (e) {
-      print('❌ [MODERN INVENTARIO] Error en initState: $e');
-      print('❌ [MODERN INVENTARIO] Stack trace: ${StackTrace.current}');
+      LoggingService.error('Error en initState: $e');
     }
   }
 
@@ -100,7 +91,7 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
         _categorias = categorias;
       });
     } catch (e) {
-      print('Error cargando categorías: $e');
+      LoggingService.error('Error cargando categorías: $e');
     }
   }
 
@@ -111,7 +102,7 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
         _tallas = tallas;
       });
     } catch (e) {
-      print('Error cargando tallas: $e');
+      LoggingService.error('Error cargando tallas: $e');
     }
   }
 
@@ -121,7 +112,7 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
       // DatosService maneja automáticamente la sincronización
       await _datosService.initialize();
     } catch (e) {
-      print('Error cargando datos del usuario: $e');
+      LoggingService.error('Error cargando datos del usuario: $e');
     }
   }
 
@@ -376,12 +367,6 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
 
   @override
   Widget build(BuildContext context) {
-    print('🔍 [MODERN INVENTARIO] build() llamado');
-    print('🔍 [MODERN INVENTARIO] _productos.length: ${_productos.length}');
-    print('🔍 [MODERN INVENTARIO] _categorias.length: ${_categorias.length}');
-    print('🔍 [MODERN INVENTARIO] _tallas.length: ${_tallas.length}');
-    print('🔍 [MODERN INVENTARIO] _cargando: $_cargando');
-    
     return Scaffold(
         backgroundColor: AppTheme.backgroundColor,
       body: SingleChildScrollView(
