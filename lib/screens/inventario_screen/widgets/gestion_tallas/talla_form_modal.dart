@@ -94,9 +94,6 @@ class _TallaFormModalState extends State<TallaFormModal> {
     });
 
     try {
-      print('🔍 TallaFormModal: Creando talla...');
-      print('🔍 TallaFormModal: widget.talla es null: ${widget.talla == null}');
-      print('🔍 TallaFormModal: widget.talla?.id: ${widget.talla?.id}');
       
       final talla = Talla(
         id: widget.talla?.id, // Esto debería ser null para nuevas tallas
@@ -111,8 +108,6 @@ class _TallaFormModalState extends State<TallaFormModal> {
         updatedAt: DateTime.now(),
       );
       
-      print('🔍 TallaFormModal: Talla creada con id: ${talla.id}');
-      print('🔍 TallaFormModal: toMap(): ${talla.toMap()}');
 
       Talla tallaGuardada;
       if (widget.talla == null) {

@@ -11,7 +11,9 @@ import '../../services/ml/ml_persistence_service.dart';
 import '../../services/system/data_migration_service.dart';
 import '../../widgets/connectivity_status_widget.dart';
 import '../../widgets/sync_status_widget.dart';
-import 'widgets/dashboard_header.dart';
+import '../../services/system/logging_service.dart';
+import '../../widgets/search/global_search_widget.dart';
+import '../../models/search_result.dart';
 import 'widgets/dashboard_stats.dart';
 import 'widgets/dashboard_bar_chart.dart';
 import 'widgets/dashboard_ai_sidebar.dart';
@@ -61,9 +63,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await _loadAIInsights();
       
       // Los datos del dashboard se cargan automáticamente en el constructor
-      print('✅ Servicios inicializados - DashboardService se carga automáticamente');
     } catch (e) {
-      print('Error inicializando servicios: $e');
+      LoggingService.error('Error inicializando servicios: $e');
     }
   }
 
@@ -74,18 +75,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final isMigrated = await _dataMigrationService.isDataMigrated();
       
       if (!isMigrated) {
-        print('Iniciando migración de datos...');
+        LoggingService.info('Iniciando migración de datos...');
         await _dataMigrationService.migrateExistingData();
         
         // Recargar datos de entrenamiento después de la migración
         await _advancedMLService.loadTrainingData();
         
-        print('Migración de datos completada');
+        LoggingService.info('Migración de datos completada');
       } else {
-        print('Los datos ya fueron migrados anteriormente');
+        LoggingService.info('Los datos ya fueron migrados anteriormente');
       }
     } catch (e) {
-      print('Error en migración de datos: $e');
+      LoggingService.error('Error en migración de datos: $e');
     }
   }
 
@@ -106,7 +107,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         });
       }
     } catch (e) {
-      print('Error cargando insights: $e');
+      LoggingService.error('Error cargando insights: $e');
       if (mounted) {
         setState(() {
           _isLoadingInsights = false;
@@ -125,13 +126,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
     
-    print('🔍 Buscando: $query');
+    LoggingService.info('🔍 Búsqueda realizada: $query');
+    // La búsqueda se maneja automáticamente por GlobalSearchWidget
+  }
+
+  // Manejar selección de resultado de búsqueda
+  void _onSearchResultSelected(SearchResult result) {
+    LoggingService.info('🎯 Resultado seleccionado: ${result.title} (${result.type})');
     
-    // TODO: Implementar búsqueda real en productos, clientes y ventas
-    // Por ahora, mostrar un mensaje
+    // Navegar según el tipo de resultado
+    switch (result.type) {
+      case 'producto':
+        setState(() {
+          _selectedIndex = 1; // Inventario
+        });
+        break;
+      case 'venta':
+        setState(() {
+          _selectedIndex = 2; // Ventas
+        });
+        break;
+      case 'cliente':
+        setState(() {
+          _selectedIndex = 3; // Clientes (si existe) o Ventas
+        });
+        break;
+      default:
+        // Mantener en dashboard
+        break;
+    }
+    
+    // Mostrar mensaje de navegación
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Buscando: $query'),
+        content: Text('Navegando a ${result.title}'),
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -219,10 +247,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header del dashboard
-                    DashboardHeader(
-                      searchController: _searchController,
-                      onSearch: _performSearch,
+                    // Header del dashboard con búsqueda global
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Título del dashboard
+                        Text(
+                          'Dashboard',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Bienvenido de vuelta. Aquí tienes un resumen de tu negocio.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Búsqueda global
+                        GlobalSearchWidget(
+                          onResultSelected: _onSearchResultSelected,
+                          onSearchPerformed: _performSearch,
+                          hintText: 'Buscar productos, ventas, clientes...',
+                        ),
+                      ],
                     ),
                     
                     const SizedBox(height: 24),
