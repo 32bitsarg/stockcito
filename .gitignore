@@ -267,3 +267,4 @@ docs/
 config.json
 secrets.json
 credentials.json
+sentry.properties

@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
+import 'sentry_service.dart';
 
 enum LogLevel {
   debug,
@@ -35,6 +36,16 @@ class LoggingService {
   /// Log de error
   static void error(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
     _log(LogLevel.error, message, tag: tag, error: error, stackTrace: stackTrace);
+    
+    // Enviar errores críticos a Sentry
+    if (error != null) {
+      SentryService.captureError(
+        error,
+        stackTrace: stackTrace,
+        hint: message,
+        tags: tag != null ? {'tag': tag} : null,
+      );
+    }
   }
 
   /// Método interno para logging

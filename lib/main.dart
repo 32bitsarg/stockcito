@@ -15,11 +15,18 @@ import 'services/system/data_migration_service.dart';
 import 'services/ml/ml_consent_service.dart';
 import 'services/system/connectivity_service.dart';
 import 'services/datos/enhanced_sync_service.dart';
+import 'services/system/sentry_service.dart';
 import 'widgets/window_manager_wrapper.dart';
 import 'config/supabase_config.dart';
+import 'config/sentry_config.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializar Sentry primero para capturar cualquier error durante el startup
+  await SentryService().initialize();
   
   // Configurar logging
   LoggingService.info('Stockcito iniciando...');
@@ -28,6 +35,11 @@ void main() async {
   LoggingService.info('Cargando configuración de Supabase...');
   await SupabaseConfig.load();
   LoggingService.info('Configuración de Supabase cargada');
+  
+  // Cargar configuración de Sentry
+  LoggingService.info('Cargando configuración de Sentry...');
+  await SentryConfig.load();
+  LoggingService.info('Configuración de Sentry cargada');
   
   // Inicializar Supabase Auth
   LoggingService.info('Inicializando Supabase Auth...');
