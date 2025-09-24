@@ -4,10 +4,10 @@ import '../../services/datos/datos.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
 import '../../screens/ventas_screen/widgets/nueva_venta/nueva_venta_screen.dart';
+import '../../widgets/lazy_list_widget.dart';
 import 'widgets/ventas_header_widget.dart';
 import 'widgets/ventas_filters_widget.dart';
 import 'widgets/ventas_metrics_widget.dart';
-import 'widgets/ventas_list_widget.dart';
 import 'widgets/ventas_detail_modal.dart';
 import 'widgets/ventas_edit_modal.dart';
 import 'functions/ventas_functions.dart';
@@ -22,9 +22,8 @@ class ModernVentasScreen extends StatefulWidget {
 class _ModernVentasScreenState extends State<ModernVentasScreen> {
   final DatosService _datosService = DatosService();
   
-  List<Venta> _ventas = [];
+  List<Venta> _ventas = []; // Mantenido para métricas
   List<Cliente> _clientes = [];
-  bool _isLoading = true;
   
   // Filtros
   String _filtroEstado = 'Todas';
@@ -42,23 +41,16 @@ class _ModernVentasScreenState extends State<ModernVentasScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
+      // Cargar solo datos necesarios para métricas y filtros
       final ventas = await _datosService.getVentas();
       final clientes = await _datosService.getClientes();
       
       setState(() {
         _ventas = ventas;
         _clientes = clientes;
-        _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -74,13 +66,215 @@ class _ModernVentasScreenState extends State<ModernVentasScreen> {
     }
   }
 
+  /// Obtiene los filtros actuales para el lazy loading
+  Map<String, dynamic> _getCurrentFilters() {
+    return {
+      'estado': _filtroEstado,
+      'cliente': _filtroCliente,
+      'metodoPago': _filtroMetodoPago,
+    };
+  }
+
+  /// Construye la tarjeta de venta para el lazy loading
+  Widget _buildVentaCard(Venta venta, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _verDetalleVenta(venta),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Icono de estado
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: VentasFunctions.getEstadoColor(venta.estado).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: VentasFunctions.getEstadoColor(venta.estado).withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    VentasFunctions.getEstadoIcon(venta.estado),
+                    color: VentasFunctions.getEstadoColor(venta.estado),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Información de la venta
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Cliente y fecha
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              venta.cliente,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppTheme.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            VentasFunctions.formatFecha(venta.fecha),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+
+                      // Estado y método de pago
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: VentasFunctions.getEstadoColor(venta.estado).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              venta.estado,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: VentasFunctions.getEstadoColor(venta.estado),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            venta.metodoPago,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Total y productos
+                      Row(
+                        children: [
+                          Text(
+                            VentasFunctions.formatPrecio(venta.total),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            '${venta.items.length} producto${venta.items.length != 1 ? 's' : ''}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Botones de acción
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildActionButton(
+                      context,
+                      Icons.visibility_outlined,
+                      AppTheme.infoColor,
+                      () => _verDetalleVenta(venta),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionButton(
+                      context,
+                      Icons.edit_outlined,
+                      AppTheme.primaryColor,
+                      () => _editarVenta(venta),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionButton(
+                      context,
+                      Icons.delete_outline,
+                      AppTheme.errorColor,
+                      () => _eliminarVenta(venta),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Construye botón de acción
+  Widget _buildActionButton(
+    BuildContext context,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Icon(
+            icon,
+            size: 18,
+            color: color,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildContent(),
+      body: _buildContent(),
     );
   }
 
@@ -117,12 +311,37 @@ class _ModernVentasScreenState extends State<ModernVentasScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Lista de ventas
-          VentasListWidget(
-            ventas: _getVentasFiltradas(),
-            onVerVenta: _verVenta,
-            onEditarVenta: _editarVenta,
-            onEliminarVenta: _eliminarVenta,
+          // Lista de ventas con lazy loading
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: LazyListWidget<Venta>(
+              entityKey: 'ventas_ventas',
+              pageSize: 20,
+              dataLoader: (page, pageSize) => _datosService.getVentasLazy(
+                page: page,
+                limit: pageSize,
+                filters: _getCurrentFilters(),
+              ),
+              itemBuilder: (venta, index) => _buildVentaCard(venta, index),
+              padding: const EdgeInsets.all(16),
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              filters: _getCurrentFilters(),
+              onRefresh: () {
+                // Recargar datos de métricas
+                _loadData();
+              },
+            ),
           ),
         ],
       ),
@@ -170,7 +389,8 @@ class _ModernVentasScreenState extends State<ModernVentasScreen> {
     });
   }
 
-  void _verVenta(Venta venta) {
+
+  void _verDetalleVenta(Venta venta) {
     VentasDetailModal.show(context, venta, onEditar: _editarVenta);
   }
 

@@ -16,6 +16,9 @@ import 'services/ml/ml_consent_service.dart';
 import 'services/system/connectivity_service.dart';
 import 'services/datos/enhanced_sync_service.dart';
 import 'services/system/sentry_service.dart';
+import 'services/system/intelligent_cache_service.dart';
+import 'services/system/lazy_loading_service.dart';
+import 'services/system/automated_backup_service.dart';
 import 'widgets/window_manager_wrapper.dart';
 import 'config/supabase_config.dart';
 import 'config/sentry_config.dart';
@@ -86,6 +89,23 @@ void main() async {
   final enhancedSyncService = EnhancedSyncService();
   await enhancedSyncService.initialize();
   LoggingService.info('EnhancedSyncService inicializado correctamente');
+  
+  // Inicializar IntelligentCacheService
+  LoggingService.info('Inicializando IntelligentCacheService...');
+  final intelligentCacheService = IntelligentCacheService();
+  await intelligentCacheService.initialize();
+  LoggingService.info('IntelligentCacheService inicializado correctamente');
+  
+  // Inicializar LazyLoadingService
+  LoggingService.info('Inicializando LazyLoadingService...');
+  final lazyLoadingService = LazyLoadingService();
+  LoggingService.info('LazyLoadingService inicializado correctamente');
+
+  // Inicializar AutomatedBackupService
+  LoggingService.info('Inicializando AutomatedBackupService...');
+  final automatedBackupService = AutomatedBackupService();
+  await automatedBackupService.initialize();
+  LoggingService.info('AutomatedBackupService inicializado correctamente');
   
   // Configurar dependencias circulares
   LoggingService.info('Configurando dependencias de servicios...');

@@ -4,6 +4,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/producto.dart';
+import '../../../services/system/export_service.dart';
 
 class ReportesFunctions {
   /// Filtra productos por categoría y talla
@@ -245,6 +246,20 @@ class ReportesFunctions {
     }
   }
 
+  /// Obtiene color según el stock
+  static Color getStockColor(int stock) {
+    if (stock <= 0) return AppTheme.errorColor;
+    if (stock <= 5) return AppTheme.warningColor;
+    return AppTheme.successColor;
+  }
+
+  /// Obtiene icono según el stock
+  static IconData getStockIcon(int stock) {
+    if (stock <= 0) return Icons.error_outline;
+    if (stock <= 5) return Icons.warning_outlined;
+    return Icons.check_circle_outline;
+  }
+
   /// Muestra un SnackBar de error
   static void showErrorSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -255,6 +270,62 @@ class ReportesFunctions {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
+      ),
+    );
+  }
+
+  /// Exporta productos a CSV
+  static Future<String> exportarProductosCSV(List<Producto> productos) async {
+    final exportService = ExportService();
+    return await exportService.exportProductosToCSV(productos);
+  }
+
+  /// Exporta reporte completo a JSON
+  static Future<String> exportarReporteCompletoJSON({
+    required List<Producto> productos,
+    required Map<String, dynamic> metricas,
+  }) async {
+    final exportService = ExportService();
+    return await exportService.exportReporteCompletoToJSON(
+      productos: productos,
+      ventas: [], // TODO: Agregar ventas cuando estén disponibles
+      clientes: [], // TODO: Agregar clientes cuando estén disponibles
+      metricas: metricas,
+    );
+  }
+
+  /// Muestra diálogo de exportación exitosa
+  static void showExportSuccessDialog(BuildContext context, String filePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exportación Exitosa'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('El archivo se ha exportado correctamente:'),
+            const SizedBox(height: 8),
+            Text(
+              filePath.split('/').last,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'El archivo se encuentra en la carpeta de documentos de la aplicación.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
       ),
     );
   }
