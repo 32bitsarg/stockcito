@@ -921,6 +921,41 @@ class DatosService {
     }
   }
 
+  /// Actualiza una venta existente
+  Future<Venta> updateVenta(Venta venta) async {
+    try {
+      LoggingService.info('Actualizando venta: ${venta.id}');
+      
+      // Actualizar en base de datos local
+      await _localDb.updateVenta(venta);
+      
+      if (_isSignedIn && !_isAnonymous) {
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
+          type: SyncType.update,
+          table: 'ventas',
+          data: _prepareVentaForSupabase(venta),
+        ));
+        
+        // Sincronizar también los detalles de venta actualizados
+        for (final item in venta.items) {
+          _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
+            type: SyncType.update,
+            table: 'detalles_venta',
+            data: _prepareDetalleVentaForSupabase(item),
+          ));
+        }
+      }
+
+      _invalidateCache('ventas_${_currentUserId ?? 'anon'}');
+      
+      LoggingService.info('Venta actualizada: ${venta.id}');
+      return venta;
+    } catch (e) {
+      LoggingService.error('Error actualizando venta: $e');
+      rethrow;
+    }
+  }
+
   // ==================== CLIENTES ====================
 
   /// Obtiene todos los clientes (local + sincronizado)
