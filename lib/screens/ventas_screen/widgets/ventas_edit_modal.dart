@@ -3,6 +3,7 @@ import '../../../config/app_theme.dart';
 import '../../../models/venta.dart';
 import '../../../widgets/animated_widgets.dart';
 import '../functions/ventas_functions.dart';
+import '../services/ventas_edit_service.dart';
 
 class VentasEditModal extends StatefulWidget {
   final Venta venta;
@@ -52,6 +53,11 @@ class _VentasEditModalState extends State<VentasEditModal> {
   
   final List<String> _estados = ['Pendiente', 'Completada', 'Cancelada'];
   final List<String> _metodosPago = ['Efectivo', 'Tarjeta', 'Transferencia'];
+  
+  // Servicio y estado
+  final VentasEditService _ventasEditService = VentasEditService();
+  bool _isLoading = false;
+  bool _canEdit = true;
 
   @override
   void initState() {
@@ -59,6 +65,24 @@ class _VentasEditModalState extends State<VentasEditModal> {
     _estado = widget.venta.estado;
     _metodoPago = widget.venta.metodoPago;
     _notas = widget.venta.notas;
+    _checkIfCanEdit();
+  }
+
+  Future<void> _checkIfCanEdit() async {
+    try {
+      final canEdit = await _ventasEditService.canEditVenta(widget.venta.id!);
+      if (mounted) {
+        setState(() {
+          _canEdit = canEdit;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _canEdit = false;
+        });
+      }
+    }
   }
 
   @override
@@ -82,6 +106,12 @@ class _VentasEditModalState extends State<VentasEditModal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Banner de advertencia si no se puede editar
+            if (!_canEdit) ...[
+              _buildWarningBanner(context),
+              const SizedBox(height: 16),
+            ],
+            
             // Información de la venta
             _buildEditarInfo(context),
             const SizedBox(height: 24),
@@ -94,6 +124,52 @@ class _VentasEditModalState extends State<VentasEditModal> {
             _buildEditarAcciones(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildWarningBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warningColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.warningColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_outlined,
+            color: AppTheme.warningColor,
+            size: 24,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Venta no editable',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppTheme.warningColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Esta venta no puede ser editada debido a su estado actual.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.warningColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -322,10 +398,10 @@ class _VentasEditModalState extends State<VentasEditModal> {
       children: [
         Expanded(
           child: AnimatedButton(
-            text: 'Guardar Cambios',
+            text: _isLoading ? 'Guardando...' : 'Guardar Cambios',
             type: ButtonType.primary,
-            onPressed: () => _guardarCambiosVenta(context),
-            icon: Icons.save,
+            onPressed: _isLoading || !_canEdit ? null : () => _guardarCambiosVenta(context),
+            icon: _isLoading ? Icons.hourglass_empty : Icons.save,
           ),
         ),
         const SizedBox(width: 16),
@@ -341,12 +417,72 @@ class _VentasEditModalState extends State<VentasEditModal> {
     );
   }
 
-  void _guardarCambiosVenta(BuildContext context) {
-    // TODO: Implementar guardado de cambios con DatosService
+  Future<void> _guardarCambiosVenta(BuildContext context) async {
+    if (!_canEdit) {
+      _showErrorSnackBar(context, 'Esta venta no puede ser editada');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Crear venta actualizada
+      final ventaActualizada = Venta(
+        id: widget.venta.id,
+        cliente: widget.venta.cliente,
+        telefono: widget.venta.telefono,
+        email: widget.venta.email,
+        estado: _estado,
+        metodoPago: _metodoPago,
+        total: widget.venta.total,
+        fecha: widget.venta.fecha,
+        items: widget.venta.items,
+        notas: _notas.trim().isEmpty ? '' : _notas.trim(),
+      );
+
+      // Actualizar venta usando el servicio
+      await _ventasEditService.updateVenta(ventaActualizada);
+
+      if (mounted) {
+        // Mostrar mensaje de éxito
+        _showSuccessSnackBar(context, 'Venta actualizada exitosamente');
+        
+        // Cerrar modal y retornar resultado
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar(context, 'Error al actualizar venta: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Funcionalidad de guardar cambios en desarrollo'),
-        backgroundColor: AppTheme.warningColor,
+        content: Text(message),
+        backgroundColor: AppTheme.successColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.errorColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
