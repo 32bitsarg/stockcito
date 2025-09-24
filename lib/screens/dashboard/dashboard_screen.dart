@@ -9,6 +9,8 @@ import '../../services/ai/ai_insights_service.dart';
 import '../../services/ml/advanced_ml_service.dart';
 import '../../services/ml/ml_persistence_service.dart';
 import '../../services/system/data_migration_service.dart';
+import '../../widgets/connectivity_status_widget.dart';
+import '../../widgets/sync_status_widget.dart';
 import 'widgets/dashboard_header.dart';
 import 'widgets/dashboard_stats.dart';
 import 'widgets/dashboard_bar_chart.dart';
@@ -174,6 +176,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       _performSearch(query);
                     },
                     actions: [
+                      // Widget de estado de conectividad
+                      const ConnectivityStatusWidget(showDetails: true),
+                      const SizedBox(width: 8),
+                      // Widget de estado de sincronización
+                      const SyncStatusWidget(showDetails: true),
+                      const SizedBox(width: 8),
                       // Widget de notificaciones inteligentes
                       const SmartNotificationsWidget(),
                       const SizedBox(width: 8),
@@ -228,7 +236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           SizedBox(
                             width: 400, // Ancho fijo para el gráfico
                             child: DashboardBarChart(
-                              ventasUltimos7Dias: dashboardService.ventasUltimos7Dias ?? [],
+                              ventasUltimos7Dias: dashboardService.ventasUltimos7Dias,
                             ),
                           ),
                           

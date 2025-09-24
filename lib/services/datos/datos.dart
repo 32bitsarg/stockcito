@@ -4,6 +4,8 @@ import 'package:stockcito/services/auth/supabase_auth_service.dart';
 import 'package:stockcito/services/system/logging_service.dart';
 import 'package:stockcito/services/ml/ml_training_service.dart';
 import 'package:stockcito/services/ml/ml_consent_service.dart';
+import 'package:stockcito/services/datos/enhanced_sync_service.dart' as enhanced_sync;
+import 'package:stockcito/models/connectivity_enums.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
@@ -26,6 +28,7 @@ class DatosService {
   MLConsentService? _consentService;
   final CategoriaService _categoriaService = CategoriaService();
   final TallaService _tallaService = TallaService();
+  final enhanced_sync.EnhancedSyncService _enhancedSyncService = enhanced_sync.EnhancedSyncService();
   
   /// Inicializa el servicio de autenticación (inyección de dependencia)
   void initializeAuthService(SupabaseAuthService authService) {
@@ -42,6 +45,9 @@ class DatosService {
   void initializeMLConsentService(MLConsentService consentService) {
     _consentService = consentService;
   }
+
+  /// Obtiene el servicio de sincronización mejorado
+  enhanced_sync.EnhancedSyncService get enhancedSyncService => _enhancedSyncService;
 
   /// Inicializa datos de prueba si la base de datos está vacía
   Future<void> initializeSampleDataIfEmpty() async {
@@ -95,11 +101,11 @@ class DatosService {
       if (_isSignedIn && !_isAnonymous) {
         try {
           // Para usuarios autenticados, agregar a cola de sincronización
-          _addToSyncQueue(SyncOperation(
-            type: SyncType.delete,
-            table: 'ventas',
-            data: {'id': id},
-          ));
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
+          type: SyncType.delete,
+          table: 'ventas',
+          data: {'id': id},
+        ));
           LoggingService.info('Venta agregada a cola de sincronización para Supabase');
         } catch (e) {
           LoggingService.warning('Error agregando venta a cola de sincronización: $e');
@@ -125,18 +131,14 @@ class DatosService {
   String? get _currentUserId => _authService?.currentUserId;
   final LocalDatabaseService _localDb = LocalDatabaseService();
   
-  // Cola de sincronización
-  final List<SyncOperation> _syncQueue = [];
-  bool _isProcessingQueue = false;
+  // Sistema de sincronización viejo eliminado - ahora usamos EnhancedSyncService
   
   // Cache de datos para optimización
   final Map<String, dynamic> _cache = {};
   final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheExpiry = Duration(minutes: 5);
   
-  // Rate limiting y batching
-  static const int _maxBatchSize = 10;
-  static const Duration _batchDelay = Duration(seconds: 2);
+  // Rate limiting (mantenido para sincronización desde Supabase)
   static const Duration _rateLimitDelay = Duration(milliseconds: 500);
   DateTime? _lastApiCall;
   int _apiCallCount = 0;
@@ -161,8 +163,8 @@ class DatosService {
         await _loadUserData();
       }
       
-      // Procesar cola de sincronización pendiente
-      await _processSyncQueue();
+      // Procesar cola de sincronización pendiente (ahora manejado por EnhancedSyncService)
+      await _enhancedSyncService.forceSync();
       
       LoggingService.info('DatosService inicializado correctamente');
     } catch (e) {
@@ -277,7 +279,7 @@ class DatosService {
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
         LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'productos',
           data: _prepareProductoForSupabase(sanitizedProducto),
@@ -309,7 +311,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.update,
           table: 'productos',
           data: _prepareProductoForSupabase(producto),
@@ -337,7 +339,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.update,
           table: 'productos',
           data: {
@@ -391,7 +393,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.delete,
           table: 'productos',
           data: {'id': id},
@@ -469,7 +471,7 @@ class DatosService {
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
         LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'costos_directos',
           data: _prepareCostoDirectoForSupabase(sanitizedCosto),
@@ -498,7 +500,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.update,
           table: 'costos_directos',
           data: _prepareCostoDirectoForSupabase(costo),
@@ -524,7 +526,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.delete,
           table: 'costos_directos',
           data: {'id': id},
@@ -602,7 +604,7 @@ class DatosService {
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
         LoggingService.info('🔄 [DATOS] Usuario autenticado, agregando a cola de sincronización...');
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'costos_indirectos',
           data: _prepareCostoIndirectoForSupabase(sanitizedCosto),
@@ -631,7 +633,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.update,
           table: 'costos_indirectos',
           data: _prepareCostoIndirectoForSupabase(costo),
@@ -657,7 +659,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.delete,
           table: 'costos_indirectos',
           data: {'id': id},
@@ -709,7 +711,7 @@ class DatosService {
       await _localDb.insertVenta(venta);
       
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'ventas',
           data: _prepareVentaForSupabase(venta),
@@ -717,7 +719,7 @@ class DatosService {
         
         // Sincronizar también los detalles de venta
         for (final item in venta.items) {
-          _addToSyncQueue(SyncOperation(
+          _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
             type: SyncType.create,
             table: 'detalles_venta',
             data: _prepareDetalleVentaForSupabase(item),
@@ -782,7 +784,7 @@ class DatosService {
       await _localDb.insertCliente(cliente);
       
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'clientes',
           data: _prepareClienteForSupabase(cliente),
@@ -822,7 +824,7 @@ class DatosService {
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
         final data = _prepareClienteForSupabase(cliente);
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.update,
           table: 'clientes',
           data: data,
@@ -859,7 +861,7 @@ class DatosService {
       
       // Si está autenticado, agregar a cola de sincronización
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.delete,
           table: 'clientes',
           data: {'id': clienteId},
@@ -911,100 +913,7 @@ class DatosService {
   }
 
   /// Procesa operaciones en lotes para optimizar llamadas a Supabase
-  Future<void> _processBatchOperations(List<SyncOperation> operations) async {
-    if (operations.isEmpty) return;
-    
-    try {
-      await _applyRateLimit();
-      
-      // Agrupar operaciones por tipo y tabla
-      final groupedOps = <String, List<SyncOperation>>{};
-      for (final op in operations) {
-        final key = '${op.type}_${op.table}';
-        groupedOps[key] ??= [];
-        groupedOps[key]!.add(op);
-      }
-      
-      // Procesar cada grupo
-      for (final group in groupedOps.values) {
-        await _processOperationGroup(group);
-      }
-      
-      LoggingService.info('Lote de ${operations.length} operaciones procesado');
-    } catch (e) {
-      LoggingService.error('Error procesando lote de operaciones: $e');
-      // Reagregar operaciones fallidas a la cola
-      _syncQueue.insertAll(0, operations);
-    }
-  }
-
-  /// Procesa un grupo de operaciones del mismo tipo
-  Future<void> _processOperationGroup(List<SyncOperation> operations) async {
-    if (operations.isEmpty) return;
-    
-    final firstOp = operations.first;
-    final userId = _currentUserId;
-    if (userId == null) return;
-    
-    try {
-      switch (firstOp.type) {
-        case SyncType.create:
-          await _batchCreate(firstOp.table, operations, userId);
-          break;
-        case SyncType.update:
-          await _batchUpdate(firstOp.table, operations, userId);
-          break;
-        case SyncType.delete:
-          await _batchDelete(firstOp.table, operations, userId);
-          break;
-      }
-    } catch (e) {
-      LoggingService.error('Error procesando grupo de operaciones: $e');
-      rethrow;
-    }
-  }
-
-  /// Crea múltiples registros en una sola llamada
-  Future<void> _batchCreate(String table, List<SyncOperation> operations, String userId) async {
-    final dataList = operations.map((op) {
-      final data = Map<String, dynamic>.from(op.data);
-      data['user_id'] = userId;
-      data['created_at'] = DateTime.now().toIso8601String();
-      data['updated_at'] = DateTime.now().toIso8601String();
-      return data;
-    }).toList();
-    
-    await Supabase.instance.client
-        .from(table)
-        .insert(dataList);
-  }
-
-  /// Actualiza múltiples registros (una llamada por registro para updates)
-  Future<void> _batchUpdate(String table, List<SyncOperation> operations, String userId) async {
-    for (final op in operations) {
-      final data = Map<String, dynamic>.from(op.data);
-      data['user_id'] = userId;
-      data['updated_at'] = DateTime.now().toIso8601String();
-      
-      await Supabase.instance.client
-          .from(table)
-          .update(data)
-          .eq('id', data['id'])
-          .eq('user_id', userId);
-    }
-  }
-
-  /// Elimina múltiples registros en una sola llamada
-  Future<void> _batchDelete(String table, List<SyncOperation> operations, String userId) async {
-    // Para Supabase, eliminamos uno por uno ya que no tiene in_ para delete
-    for (final op in operations) {
-      await Supabase.instance.client
-          .from(table)
-          .delete()
-          .eq('id', op.data['id'])
-          .eq('user_id', userId);
-    }
-  }
+  // Métodos de procesamiento batch eliminados - ahora usamos EnhancedSyncService
 
   // ==================== SINCRONIZACIÓN ====================
 
@@ -1164,41 +1073,7 @@ class DatosService {
 
   // ==================== COLA DE SINCRONIZACIÓN ====================
 
-  /// Agrega una operación a la cola de sincronización
-  void _addToSyncQueue(SyncOperation operation) {
-    _syncQueue.add(operation);
-    _processSyncQueue();
-  }
-
-  /// Procesa la cola de sincronización con batching
-  Future<void> _processSyncQueue() async {
-    if (_isProcessingQueue || _syncQueue.isEmpty) return;
-    
-    _isProcessingQueue = true;
-    
-    try {
-      while (_syncQueue.isNotEmpty) {
-        // Tomar un lote de operaciones
-        final batchSize = _syncQueue.length > _maxBatchSize ? _maxBatchSize : _syncQueue.length;
-        final batch = _syncQueue.take(batchSize).toList();
-        _syncQueue.removeRange(0, batchSize);
-        
-        // Procesar el lote
-        await _processBatchOperations(batch);
-        
-        // Pequeña pausa entre lotes para no sobrecargar
-        if (_syncQueue.isNotEmpty) {
-          await Future.delayed(_batchDelay);
-        }
-      }
-      
-      LoggingService.info('Cola de sincronización procesada');
-    } catch (e) {
-      LoggingService.error('Error procesando cola de sincronización: $e');
-    } finally {
-      _isProcessingQueue = false;
-    }
-  }
+  // Métodos del sistema viejo eliminados - ahora usamos EnhancedSyncService
 
 
   // ==================== PREPARACIÓN DE DATOS ====================
@@ -1539,7 +1414,7 @@ class DatosService {
 
       // Si está autenticado, sincronizar con Supabase
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'materiales',
           data: sanitizedData,
@@ -1703,7 +1578,7 @@ class DatosService {
 
       // Si está autenticado, sincronizar con Supabase
       if (_isSignedIn && !_isAnonymous) {
-        _addToSyncQueue(SyncOperation(
+        _enhancedSyncService.addSyncOperation(enhanced_sync.SyncOperation(
           type: SyncType.create,
           table: 'historial_calculos',
           data: calculoData,
@@ -1838,18 +1713,25 @@ class DatosService {
   // ==================== UTILIDADES ====================
 
   /// Obtiene el estado de sincronización
-  bool get isSyncing => _isProcessingQueue;
+  bool get isSyncing => _enhancedSyncService.syncStatus == SyncStatus.syncing;
   
   /// Obtiene el número de operaciones pendientes
-  int get pendingOperations => _syncQueue.length;
+  int get pendingOperations => _enhancedSyncService.pendingOperations;
   
   /// Fuerza la sincronización de todos los datos
   Future<void> forceSync() async {
     if (_isSignedIn && !_isAnonymous) {
       await _loadUserData();
-      await _processSyncQueue();
+      // Procesar cola de sincronización pendiente (ahora manejado por EnhancedSyncService)
+      await _enhancedSyncService.forceSync();
     }
   }
+
+  /// Obtiene el estado de sincronización mejorado
+  SyncStatus get syncStatus => _enhancedSyncService.syncStatus;
+
+  /// Obtiene el tiempo de la última sincronización exitosa
+  DateTime? get lastSyncTime => _enhancedSyncService.lastSyncTime;
 
   // ==================== MÉTODOS PARA CATEGORÍAS ====================
 
@@ -1896,8 +1778,7 @@ class DatosService {
   }
 }
 
-/// Tipos de operaciones de sincronización
-enum SyncType { create, update, delete }
+// Los enums SyncType ahora están en connectivity_enums.dart
 
 /// Operación de sincronización
 class SyncOperation {

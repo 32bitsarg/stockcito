@@ -238,8 +238,27 @@ class TallaService {
           );
 
           if (tallaSupabase.nombre.isEmpty) {
-            // Insertar en Supabase
-            await _supabase.from('tallas').insert(tallaLocal.toJson());
+            // Verificar si ya existe una talla con el mismo nombre en Supabase antes de insertar
+            final tallaExistenteEnSupabase = tallasSupabase.any((t) => 
+              t.nombre.toLowerCase() == tallaLocal.nombre.toLowerCase() && t.userId == userId
+            );
+            
+            if (!tallaExistenteEnSupabase) {
+              try {
+                // Insertar en Supabase solo si no existe
+                await _supabase.from('tallas').insert(tallaLocal.toJson());
+                LoggingService.info('Talla "${tallaLocal.nombre}" insertada en Supabase');
+              } catch (e) {
+                if (e.toString().contains('duplicate key value violates unique constraint')) {
+                  LoggingService.warning('Talla "${tallaLocal.nombre}" ya existe en Supabase (constraint violation), omitiendo inserción');
+                } else {
+                  LoggingService.error('Error insertando talla "${tallaLocal.nombre}" en Supabase: $e');
+                  rethrow;
+                }
+              }
+            } else {
+              LoggingService.info('Talla "${tallaLocal.nombre}" ya existe en Supabase, omitiendo inserción');
+            }
           } else if (tallaLocal.updatedAt.isAfter(tallaSupabase.updatedAt)) {
             // Actualizar en Supabase
             await _supabase

@@ -10,6 +10,7 @@ class AppTheme {
   static const Color infoColor = Color(0xFF3B82F6); // Azul información
   static const Color backgroundColor = Color(0xFFF8FAFC); // Gris muy claro
   static const Color surfaceColor = Color(0xFFFFFFFF); // Blanco
+  static const Color cardBackground = Color(0xFFFFFFFF); // Fondo de tarjetas
   static const Color textPrimary = Color(0xFF1F2937); // Gris oscuro
   static const Color textSecondary = Color(0xFF6B7280); // Gris medio
   static const Color borderColor = Color(0xFFE5E7EB); // Gris claro para bordes

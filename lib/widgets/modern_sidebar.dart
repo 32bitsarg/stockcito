@@ -27,18 +27,31 @@ class _ModernSidebarState extends State<ModernSidebar> {
   @override
   void initState() {
     super.initState();
-    _checkForUpdates();
+    print('🚀 [MODERN SIDEBAR] initState() llamado');
+    try {
+      _checkForUpdates();
+      print('✅ [MODERN SIDEBAR] _checkForUpdates() ejecutado');
+    } catch (e) {
+      print('❌ [MODERN SIDEBAR] Error en initState: $e');
+    }
   }
 
   @override
   void dispose() {
-    _dismissCurrentNotification();
+    print('🛑 [MODERN SIDEBAR] dispose() llamado');
+    try {
+      _dismissCurrentNotification();
+      print('✅ [MODERN SIDEBAR] _dismissCurrentNotification() ejecutado');
+    } catch (e) {
+      print('❌ [MODERN SIDEBAR] Error en dispose: $e');
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     print('🔍 [MODERN SIDEBAR] build() llamado - _pendingUpdate: ${_pendingUpdate?.version}');
+    print('🔍 [MODERN SIDEBAR] selectedIndex: ${widget.selectedIndex}');
     
     final List<Map<String, dynamic>> menuItems = [
       {
@@ -81,58 +94,45 @@ class _ModernSidebarState extends State<ModernSidebar> {
     return Stack(
       children: [
         Container(
-          width: 80,
+          width: 70,
           decoration: BoxDecoration(
             color: AppTheme.surfaceColor,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(4, 0),
+            border: Border(
+              right: BorderSide(
+                color: AppTheme.borderColor.withOpacity(0.1),
+                width: 1,
               ),
-            ],
+            ),
           ),
           child: Column(
         children: [
-          // Logo section
+          // Logo section - Minimalista
           Container(
-            height: 80,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomRight: Radius.circular(24),
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withOpacity(0.05),
+              border: Border(
+                bottom: BorderSide(
+                  color: AppTheme.borderColor.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
             ),
             child: Center(
               child: Container(
-                width: 40,
-                height: 40,
+                width: 32,
+                height: 32,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Colors.white, Colors.white70],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Center(
                   child: Text(
                     'S',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryColor,
+                      color: Colors.white,
                     ),
                   ),
                 ),
@@ -140,83 +140,58 @@ class _ModernSidebarState extends State<ModernSidebar> {
             ),
           ),
           
-          // Menu items
+          // Menu items - Minimalistas
           Expanded(
             child: ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               itemCount: menuItems.length,
               itemBuilder: (context, index) {
                 final item = menuItems[index];
                 final isSelected = widget.selectedIndex == index;
                 
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      onTap: () => widget.onItemSelected(index),
-                      child: Container(
-                        height: 60,
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(16),
+                return GestureDetector(
+                  onTap: () {
+                    print('🎯 [MODERN SIDEBAR] Tap en item $index: ${item['label']}');
+                    try {
+                      widget.onItemSelected(index);
+                      print('✅ [MODERN SIDEBAR] onItemSelected($index) ejecutado exitosamente');
+                    } catch (e) {
+                      print('❌ [MODERN SIDEBAR] Error al seleccionar item $index: $e');
+                      print('❌ [MODERN SIDEBAR] Stack trace: ${StackTrace.current}');
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isSelected ? item['color'].withOpacity(0.1) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(8),
+                      border: isSelected ? Border.all(
+                        color: item['color'].withOpacity(0.3),
+                        width: 1,
+                      ) : null,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          item['icon'],
+                          color: isSelected ? item['color'] : AppTheme.textSecondary,
+                          size: 18,
                         ),
-                        child: Row(
-                          children: [
-                            // Línea indicadora de selección
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              width: isSelected ? 3 : 0,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: isSelected ? item['color'] : Colors.transparent,
-                                borderRadius: const BorderRadius.only(
-                                  topRight: Radius.circular(2),
-                                  bottomRight: Radius.circular(2),
-                                ),
-                                boxShadow: isSelected ? [
-                                  BoxShadow(
-                                    color: item['color'].withOpacity(0.3),
-                                    blurRadius: 6,
-                                    spreadRadius: 1,
-                                    offset: const Offset(2, 0),
-                                  ),
-                                ] : null,
-                              ),
-                            ),
-                            // Contenido principal
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Icon(
-                                      item['icon'],
-                                      color: AppTheme.textSecondary,
-                                      size: 22,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    item['label'],
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.textSecondary,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 2),
+                        Text(
+                          item['label'],
+                          style: TextStyle(
+                            fontSize: 8,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? item['color'] : AppTheme.textSecondary,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 );
@@ -224,43 +199,78 @@ class _ModernSidebarState extends State<ModernSidebar> {
             ),
           ),
           
-          // Bottom section - Icono de actualizaciones
+          // Bottom section - Minimalista
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                  color: AppTheme.borderColor.withOpacity(0.1),
+                  width: 1,
+                ),
+              ),
+            ),
             child: Column(
               children: [
+                // Indicadores de estado - Ultra minimalistas
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Estado de conectividad
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.wifi,
+                        color: Colors.green.shade700,
+                        size: 10,
+                      ),
+                    ),
+                    // Estado de sincronización
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.sync,
+                        color: Colors.blue.shade700,
+                        size: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Icono de actualizaciones - Minimalista
                 GestureDetector(
                   onTap: _isCheckingUpdates ? null : () => _checkForUpdates(forceCheck: true),
                   child: Container(
-                    width: 40,
-                    height: 40,
+                    width: 28,
+                    height: 28,
                     decoration: BoxDecoration(
                       color: _getUpdateIconColor(),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                     child: _isCheckingUpdates
                         ? SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 12,
+                            height: 12,
                             child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                              strokeWidth: 1,
                               valueColor: AlwaysStoppedAnimation<Color>(_getUpdateIconTextColor()),
                             ),
                           )
                         : Icon(
                             _getUpdateIcon(),
                             color: _getUpdateIconTextColor(),
-                            size: 20,
+                            size: 12,
                           ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _getUpdateText(),
-                  style: TextStyle(
-                    fontSize: 8,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
@@ -309,14 +319,21 @@ class _ModernSidebarState extends State<ModernSidebar> {
 
   /// Verifica si hay actualizaciones disponibles
   Future<void> _checkForUpdates({bool forceCheck = false}) async {
-    if (_isCheckingUpdates) return;
+    print('🔄 [MODERN SIDEBAR] _checkForUpdates() llamado - forceCheck: $forceCheck');
+    if (_isCheckingUpdates) {
+      print('⏳ [MODERN SIDEBAR] Ya se está verificando actualizaciones, omitiendo...');
+      return;
+    }
     
+    print('🔄 [MODERN SIDEBAR] Iniciando verificación de actualizaciones...');
     setState(() {
       _isCheckingUpdates = true;
     });
 
     try {
+      print('🔄 [MODERN SIDEBAR] Llamando a _updateService.checkForUpdates()...');
       final updateInfo = await _updateService.checkForUpdates(forceCheck: forceCheck);
+      print('✅ [MODERN SIDEBAR] _updateService.checkForUpdates() completado - updateInfo: ${updateInfo?.version}');
       
       if (updateInfo != null) {
         print('🔄 [MODERN SIDEBAR] Actualización detectada, actualizando estado...');
@@ -366,25 +383,22 @@ class _ModernSidebarState extends State<ModernSidebar> {
   /// Obtiene el color del icono según el estado
   Color _getUpdateIconColor() {
     if (_pendingUpdate != null) {
-      return _pendingUpdate!.isMandatory ? Colors.red.shade100 : Colors.blue.shade100;
+      return _pendingUpdate!.isMandatory 
+          ? Colors.red.shade50 
+          : Colors.blue.shade50;
     }
-    return AppTheme.primaryColor.withOpacity(0.1);
+    return AppTheme.surfaceColor;
   }
 
   /// Obtiene el color del texto del icono
   Color _getUpdateIconTextColor() {
     if (_pendingUpdate != null) {
-      return _pendingUpdate!.isMandatory ? Colors.red.shade600 : Colors.blue.shade600;
+      return _pendingUpdate!.isMandatory 
+          ? Colors.red.shade500 
+          : Colors.blue.shade500;
     }
-    return AppTheme.primaryColor;
+    return AppTheme.textSecondary;
   }
 
-  /// Obtiene el texto según el estado
-  String _getUpdateText() {
-    if (_pendingUpdate != null) {
-      return _pendingUpdate!.isMandatory ? 'Actualizar' : 'Actualizar';
-    }
-    return 'Actualizar';
-  }
 }
 
