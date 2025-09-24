@@ -6,6 +6,7 @@ import 'package:stockcito/services/ml/ml_training_service.dart';
 import 'package:stockcito/services/ml/ml_consent_service.dart';
 import 'package:stockcito/services/datos/enhanced_sync_service.dart' as enhanced_sync;
 import 'package:stockcito/models/connectivity_enums.dart';
+import 'package:stockcito/services/system/lazy_loading_service.dart';
 import '../../models/producto.dart';
 import '../../models/venta.dart';
 import '../../models/cliente.dart';
@@ -29,6 +30,7 @@ class DatosService {
   final CategoriaService _categoriaService = CategoriaService();
   final TallaService _tallaService = TallaService();
   final enhanced_sync.EnhancedSyncService _enhancedSyncService = enhanced_sync.EnhancedSyncService();
+  final LazyLoadingService _lazyService = LazyLoadingService();
   
   /// Inicializa el servicio de autenticación (inyección de dependencia)
   void initializeAuthService(SupabaseAuthService authService) {
@@ -174,7 +176,97 @@ class DatosService {
 
   // ==================== PRODUCTOS ====================
 
-  /// Obtiene todos los productos (local + sincronizado)
+  /// Obtiene productos con lazy loading optimizado
+  Future<List<Producto>> getProductosLazy({
+    int page = 0, 
+    int limit = _maxItemsPerPage,
+    Map<String, dynamic>? filters,
+  }) async {
+    try {
+      final userId = _currentUserId;
+      if (userId == null) return [];
+
+      // Usar lazy loading service
+      return await _lazyService.loadData<Producto>(
+        entityKey: 'productos_$userId',
+        page: page,
+        pageSize: limit,
+        dataLoader: (page, pageSize) => _loadProductosFromSource(page, pageSize, filters),
+        fromJson: (json) => Producto.fromMap(json),
+        toJson: (producto) => producto.toMap(),
+        filters: filters,
+      );
+    } catch (e) {
+      LoggingService.error('Error en getProductosLazy: $e');
+      return [];
+    }
+  }
+
+  /// Carga productos desde la fuente de datos (local + sync)
+  Future<List<Producto>> _loadProductosFromSource(int page, int pageSize, Map<String, dynamic>? filters) async {
+    try {
+      final userId = _currentUserId!;
+      
+      // Cargar desde local con paginación
+      final productos = await _localDb.getAllProductos(userId: userId);
+      
+      // Aplicar filtros si existen
+      List<Producto> filteredProductos = productos;
+      if (filters != null) {
+        filteredProductos = _applyProductFilters(productos, filters);
+      }
+      
+      // Paginación
+      final startIndex = page * pageSize;
+      final endIndex = (startIndex + pageSize).clamp(0, filteredProductos.length);
+      
+      if (startIndex >= filteredProductos.length) {
+        return [];
+      }
+      
+      final paginatedProductos = filteredProductos.sublist(startIndex, endIndex);
+      
+      // Si está autenticado, sincronizar en background
+      if (_isSignedIn && !_isAnonymous) {
+        _syncProductosFromSupabase(); // Sin await para no bloquear
+      }
+      
+      return paginatedProductos;
+    } catch (e) {
+      LoggingService.error('Error cargando productos desde fuente: $e');
+      return [];
+    }
+  }
+
+  /// Aplica filtros a la lista de productos
+  List<Producto> _applyProductFilters(List<Producto> productos, Map<String, dynamic> filters) {
+    var filtered = productos;
+    
+    if (filters.containsKey('categoria') && filters['categoria'] != 'Todas') {
+      filtered = filtered.where((p) => p.categoria == filters['categoria']).toList();
+    }
+    
+    if (filters.containsKey('talla') && filters['talla'] != 'Todas') {
+      filtered = filtered.where((p) => p.talla == filters['talla']).toList();
+    }
+    
+    if (filters.containsKey('busqueda') && filters['busqueda'].isNotEmpty) {
+      final busqueda = filters['busqueda'].toLowerCase();
+      filtered = filtered.where((p) => 
+        p.nombre.toLowerCase().contains(busqueda) ||
+        p.categoria.toLowerCase().contains(busqueda) ||
+        p.talla.toLowerCase().contains(busqueda)
+      ).toList();
+    }
+    
+    if (filters.containsKey('stockBajo') && filters['stockBajo'] == true) {
+      filtered = filtered.where((p) => p.stock < 10).toList();
+    }
+    
+    return filtered;
+  }
+
+  /// Obtiene todos los productos (local + sincronizado) - Método legacy
   Future<List<Producto>> getProductos({int page = 0, int limit = _maxItemsPerPage}) async {
     try {
       final userId = _currentUserId;
@@ -679,7 +771,96 @@ class DatosService {
 
   // ==================== VENTAS ====================
 
-  /// Obtiene todas las ventas (local + sincronizado)
+  /// Obtiene ventas con lazy loading optimizado
+  Future<List<Venta>> getVentasLazy({
+    int page = 0, 
+    int limit = _maxItemsPerPage,
+    Map<String, dynamic>? filters,
+  }) async {
+    try {
+      final userId = _currentUserId;
+      if (userId == null) return [];
+
+      // Usar lazy loading service
+      return await _lazyService.loadData<Venta>(
+        entityKey: 'ventas_$userId',
+        page: page,
+        pageSize: limit,
+        dataLoader: (page, pageSize) => _loadVentasFromSource(page, pageSize, filters),
+        fromJson: (json) => Venta.fromMap(json),
+        toJson: (venta) => venta.toMap(),
+        filters: filters,
+      );
+    } catch (e) {
+      LoggingService.error('Error en getVentasLazy: $e');
+      return [];
+    }
+  }
+
+  /// Carga ventas desde la fuente de datos (local + sync)
+  Future<List<Venta>> _loadVentasFromSource(int page, int pageSize, Map<String, dynamic>? filters) async {
+    try {
+      // Cargar desde local con paginación
+      final ventas = await _localDb.getAllVentas();
+      
+      // Aplicar filtros si existen
+      List<Venta> filteredVentas = ventas;
+      if (filters != null) {
+        filteredVentas = _applyVentaFilters(ventas, filters);
+      }
+      
+      // Paginación
+      final startIndex = page * pageSize;
+      final endIndex = (startIndex + pageSize).clamp(0, filteredVentas.length);
+      
+      if (startIndex >= filteredVentas.length) {
+        return [];
+      }
+      
+      final paginatedVentas = filteredVentas.sublist(startIndex, endIndex);
+      
+      // Si está autenticado, sincronizar en background
+      if (_isSignedIn && !_isAnonymous) {
+        _syncVentasFromSupabase(); // Sin await para no bloquear
+      }
+      
+      return paginatedVentas;
+    } catch (e) {
+      LoggingService.error('Error cargando ventas desde fuente: $e');
+      return [];
+    }
+  }
+
+  /// Aplica filtros a la lista de ventas
+  List<Venta> _applyVentaFilters(List<Venta> ventas, Map<String, dynamic> filters) {
+    var filtered = ventas;
+    
+    if (filters.containsKey('estado') && filters['estado'] != 'Todas') {
+      filtered = filtered.where((v) => v.estado == filters['estado']).toList();
+    }
+    
+    if (filters.containsKey('cliente') && filters['cliente'] != 'Todos') {
+      filtered = filtered.where((v) => v.cliente == filters['cliente']).toList();
+    }
+    
+    if (filters.containsKey('metodoPago') && filters['metodoPago'] != 'Todos') {
+      filtered = filtered.where((v) => v.metodoPago == filters['metodoPago']).toList();
+    }
+    
+    if (filters.containsKey('fechaDesde') && filters['fechaDesde'] != null) {
+      final fechaDesde = filters['fechaDesde'] as DateTime;
+      filtered = filtered.where((v) => v.fecha.isAfter(fechaDesde) || v.fecha.isAtSameMomentAs(fechaDesde)).toList();
+    }
+    
+    if (filters.containsKey('fechaHasta') && filters['fechaHasta'] != null) {
+      final fechaHasta = filters['fechaHasta'] as DateTime;
+      filtered = filtered.where((v) => v.fecha.isBefore(fechaHasta) || v.fecha.isAtSameMomentAs(fechaHasta)).toList();
+    }
+    
+    return filtered;
+  }
+
+  /// Obtiene todas las ventas (local + sincronizado) - Método legacy
   Future<List<Venta>> getVentas() async {
     try {
       final cacheKey = 'ventas_${_currentUserId ?? 'anon'}';

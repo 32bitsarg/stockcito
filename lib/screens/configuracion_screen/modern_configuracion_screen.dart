@@ -9,6 +9,7 @@ import 'widgets/configuracion_notificaciones_section.dart';
 import 'widgets/configuracion_ia_section.dart';
 import 'widgets/configuracion_avanzada_section.dart';
 import 'widgets/configuracion_conectividad_section.dart';
+import 'widgets/configuracion_backup_section.dart';
 import 'widgets/configuracion_action_buttons.dart';
 
 // Importar funciones
@@ -178,6 +179,9 @@ class _ModernConfiguracionScreenState extends State<ModernConfiguracionScreen> {
             const SizedBox(height: 24),
             // Configuración de conectividad y sincronización
             const ConfiguracionConectividadSection(),
+            const SizedBox(height: 24),
+            // Configuración de backup automático
+            const ConfiguracionBackupSection(),
             const SizedBox(height: 24),
             // Botones de acción
             ConfiguracionActionButtons(

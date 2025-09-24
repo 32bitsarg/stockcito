@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/datos/smart_alerts_service.dart';
 import '../../../services/ml/ml_consent_service.dart';
+import '../../../services/system/export_service.dart';
 
 class ConfiguracionFunctions {
   /// Carga la configuración desde SharedPreferences
@@ -175,17 +176,76 @@ class ConfiguracionFunctions {
     return AppTheme.textSecondary;
   }
 
-  /// Exporta la configuración (placeholder)
-  static Future<bool> exportarConfiguracion(Map<String, dynamic> config) async {
-    // TODO: Implementar exportación real
-    await Future.delayed(const Duration(seconds: 1));
-    return true;
+  /// Exporta la configuración a JSON
+  static Future<String> exportarConfiguracion(Map<String, dynamic> config) async {
+    try {
+      final exportService = ExportService();
+      return await exportService.exportConfiguracionToJSON(config);
+    } catch (e) {
+      throw Exception('Error exportando configuración: $e');
+    }
   }
 
-  /// Importa la configuración (placeholder)
-  static Future<Map<String, dynamic>?> importarConfiguracion() async {
-    // TODO: Implementar importación real
-    await Future.delayed(const Duration(seconds: 1));
-    return null;
+  /// Importa la configuración desde JSON
+  static Future<Map<String, dynamic>> importarConfiguracion(String filePath) async {
+    try {
+      final exportService = ExportService();
+      return await exportService.importConfiguracionFromJSON(filePath);
+    } catch (e) {
+      throw Exception('Error importando configuración: $e');
+    }
+  }
+
+  /// Muestra diálogo de exportación exitosa
+  static void showExportSuccessDialog(BuildContext context, String filePath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configuración Exportada'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('La configuración se ha exportado correctamente:'),
+            const SizedBox(height: 8),
+            Text(
+              filePath.split('/').last,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'El archivo se encuentra en la carpeta de documentos de la aplicación.',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Muestra diálogo de importación exitosa
+  static void showImportSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Configuración Importada'),
+        content: const Text('La configuración se ha importado correctamente. Reinicia la aplicación para aplicar todos los cambios.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 }

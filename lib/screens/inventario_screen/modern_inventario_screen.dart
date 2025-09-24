@@ -13,6 +13,7 @@ import 'widgets/gestion_tallas/gestion_tallas_modal.dart';
 import 'functions/inventario_functions.dart';
 import '../../widgets/connectivity_status_widget.dart';
 import '../../widgets/sync_status_widget.dart';
+import '../../widgets/lazy_list_widget.dart';
 
 class ModernInventarioScreen extends StatefulWidget {
   const ModernInventarioScreen({super.key});
@@ -131,6 +132,215 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
       talla: _filtroTalla,
       busqueda: _busqueda,
       mostrarSoloStockBajo: _mostrarSoloStockBajo,
+    );
+  }
+
+  /// Obtiene los filtros actuales para el lazy loading
+  Map<String, dynamic> _getCurrentFilters() {
+    return {
+      'categoria': _filtroCategoria,
+      'talla': _filtroTalla,
+      'busqueda': _busqueda,
+      'stockBajo': _mostrarSoloStockBajo,
+    };
+  }
+
+  /// Construye la tarjeta de producto para el lazy loading
+  Widget _buildProductoCard(Producto producto, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppTheme.borderColor.withOpacity(0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _editarProducto(producto),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Icono de categoría
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: InventarioFunctions.getCategoriaColor(producto.categoria).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: InventarioFunctions.getCategoriaColor(producto.categoria).withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.tag,
+                    color: InventarioFunctions.getCategoriaColor(producto.categoria),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                
+                // Información del producto
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nombre del producto
+                      Text(
+                        producto.nombre,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      
+                      // Categoría y talla
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: InventarioFunctions.getCategoriaColor(producto.categoria).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              InventarioFunctions.getCategoriaText(producto.categoria),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: InventarioFunctions.getCategoriaColor(producto.categoria),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Talla: ${InventarioFunctions.getTallaText(producto.talla)}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Precio y stock
+                      Row(
+                        children: [
+                          Text(
+                            InventarioFunctions.formatPrecio(producto.precioVenta),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: AppTheme.primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: InventarioFunctions.getStockColor(producto.stock).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: InventarioFunctions.getStockColor(producto.stock).withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  InventarioFunctions.getStockIcon(producto.stock),
+                                  color: InventarioFunctions.getStockColor(producto.stock),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${producto.stock}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: InventarioFunctions.getStockColor(producto.stock),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Botones de acción
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildActionButton(
+                      context,
+                      Icons.edit_outlined,
+                      AppTheme.primaryColor,
+                      () => _editarProducto(producto),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildActionButton(
+                      context,
+                      Icons.delete_outline,
+                      AppTheme.errorColor,
+                      () => _eliminarProducto(producto),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Construye botón de acción
+  Widget _buildActionButton(
+    BuildContext context,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(8),
+          child: Icon(
+            icon,
+            size: 18,
+            color: color,
+          ),
+        ),
+      ),
     );
   }
 
@@ -261,12 +471,38 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
             ),
             const SizedBox(height: 24),
             
-            // Lista de productos
-            InventarioListWidget(
-              productos: _productosFiltrados,
-              cargando: _cargando,
-              onEditarProducto: _editarProducto,
-              onEliminarProducto: _eliminarProducto,
+            // Lista de productos con lazy loading
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: LazyListWidget<Producto>(
+                entityKey: 'productos_inventario',
+                pageSize: 20,
+                dataLoader: (page, pageSize) => _datosService.getProductosLazy(
+                  page: page,
+                  limit: pageSize,
+                  filters: _getCurrentFilters(),
+                ),
+                itemBuilder: (producto, index) => _buildProductoCard(producto, index),
+                padding: const EdgeInsets.all(16),
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                filters: _getCurrentFilters(),
+                onRefresh: () {
+                  // Recargar categorías y tallas también
+                  _loadCategorias();
+                  _loadTallas();
+                },
+              ),
             ),
           ],
         ),
