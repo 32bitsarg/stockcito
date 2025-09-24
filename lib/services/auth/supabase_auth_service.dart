@@ -6,6 +6,7 @@ import 'package:stockcito/services/system/logging_service.dart';
 import 'package:stockcito/services/datos/datos.dart';
 import 'package:stockcito/services/auth/security_service.dart';
 import 'package:stockcito/services/auth/password_validation_service.dart';
+import 'package:stockcito/services/system/sentry_service.dart';
 
 /// Servicio de autenticación con Supabase
 class SupabaseAuthService {
@@ -46,8 +47,25 @@ class SupabaseAuthService {
         
         if (event == AuthChangeEvent.signedIn) {
           LoggingService.info('Usuario autenticado correctamente');
+          
+          // Configurar contexto de usuario en Sentry
+          final user = data.session?.user;
+          if (user != null) {
+            SentryService.setUserContext(
+              id: user.id,
+              email: user.email,
+              username: user.userMetadata?['full_name'] ?? user.email?.split('@')[0],
+              extra: {
+                'is_anonymous': user.isAnonymous,
+                'created_at': user.createdAt,
+              },
+            );
+          }
         } else if (event == AuthChangeEvent.signedOut) {
           LoggingService.info('Usuario desconectado');
+          
+          // Limpiar contexto de usuario en Sentry
+          SentryService.setUserContext();
         }
       });
       

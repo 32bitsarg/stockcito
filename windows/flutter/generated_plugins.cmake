@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   connectivity_plus
   printing
   screen_retriever
+  sentry_flutter
   url_launcher_windows
   window_manager
 )
