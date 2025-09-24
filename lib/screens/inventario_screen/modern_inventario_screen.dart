@@ -11,6 +11,8 @@ import 'widgets/inventario_list_widget.dart';
 import 'widgets/gestion_categorias/gestion_categorias_modal.dart';
 import 'widgets/gestion_tallas/gestion_tallas_modal.dart';
 import 'functions/inventario_functions.dart';
+import '../../widgets/connectivity_status_widget.dart';
+import '../../widgets/sync_status_widget.dart';
 
 class ModernInventarioScreen extends StatefulWidget {
   const ModernInventarioScreen({super.key});
@@ -34,11 +36,26 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadProductos();
-    _loadCategorias();
-    _loadTallas();
-    _cargarDatosUsuario();
+    print('🚀 [MODERN INVENTARIO] initState() llamado');
+    try {
+      WidgetsBinding.instance.addObserver(this);
+      print('✅ [MODERN INVENTARIO] WidgetsBinding observer agregado');
+      
+      _loadProductos();
+      print('✅ [MODERN INVENTARIO] _loadProductos() llamado');
+      
+      _loadCategorias();
+      print('✅ [MODERN INVENTARIO] _loadCategorias() llamado');
+      
+      _loadTallas();
+      print('✅ [MODERN INVENTARIO] _loadTallas() llamado');
+      
+      _cargarDatosUsuario();
+      print('✅ [MODERN INVENTARIO] _cargarDatosUsuario() llamado');
+    } catch (e) {
+      print('❌ [MODERN INVENTARIO] Error en initState: $e');
+      print('❌ [MODERN INVENTARIO] Stack trace: ${StackTrace.current}');
+    }
   }
 
   @override
@@ -149,8 +166,14 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 [MODERN INVENTARIO] build() llamado');
+    print('🔍 [MODERN INVENTARIO] _productos.length: ${_productos.length}');
+    print('🔍 [MODERN INVENTARIO] _categorias.length: ${_categorias.length}');
+    print('🔍 [MODERN INVENTARIO] _tallas.length: ${_tallas.length}');
+    print('🔍 [MODERN INVENTARIO] _cargando: $_cargando');
+    
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: AppTheme.backgroundColor,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -159,6 +182,34 @@ class _ModernInventarioScreenState extends State<ModernInventarioScreen> with Wi
             // Header con estadísticas
             InventarioHeaderWidget(
               productos: _productosFiltrados,
+            ),
+            
+            // Banner de estado de conectividad y sincronización
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.borderColor),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: AppTheme.infoColor, size: 20),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Estado del Sistema:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const ConnectivityStatusWidget(showDetails: true),
+                  const SizedBox(width: 16),
+                  const SyncStatusWidget(showDetails: true),
+                ],
+              ),
             ),
             
             // Debug buttons (ocultos - disponibles para debug futuro)

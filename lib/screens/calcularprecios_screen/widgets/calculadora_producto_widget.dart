@@ -36,24 +36,30 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
 
   /// Carga las categorías y tallas dinámicas
   Future<void> _loadCategoriasYTallas() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       final categorias = await widget.calculadoraService.getCategoriasAsStrings();
       final tallas = await widget.calculadoraService.getTallasAsStrings();
       
-      setState(() {
-        _categorias = categorias;
-        _tallas = tallas;
-      });
+      if (mounted) {
+        setState(() {
+          _categorias = categorias;
+          _tallas = tallas;
+        });
+      }
     } catch (e) {
       print('Error cargando categorías y tallas: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -497,22 +503,26 @@ class _CalculadoraProductoWidgetState extends State<CalculadoraProductoWidget> {
     int? stock,
     double? precioVenta,
   }) async {
-    setState(() {
-      _producto = _producto.copyWith(
-        nombre: nombre,
-        descripcion: descripcion,
-        categoria: categoria,
-        talla: talla,
-        stock: stock,
-        precioVenta: precioVenta,
-      );
-    });
+    if (mounted) {
+      setState(() {
+        _producto = _producto.copyWith(
+          nombre: nombre,
+          descripcion: descripcion,
+          categoria: categoria,
+          talla: talla,
+          stock: stock,
+          precioVenta: precioVenta,
+        );
+      });
+    }
 
     if (_isLoading) return;
     
-    setState(() {
-      _isLoading = true;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       await widget.calculadoraService.updateProducto(_producto);

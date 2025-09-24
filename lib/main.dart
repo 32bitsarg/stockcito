@@ -13,6 +13,8 @@ import 'services/datos/datos.dart';
 import 'services/datos/dashboard_service.dart';
 import 'services/system/data_migration_service.dart';
 import 'services/ml/ml_consent_service.dart';
+import 'services/system/connectivity_service.dart';
+import 'services/datos/enhanced_sync_service.dart';
 import 'widgets/window_manager_wrapper.dart';
 import 'config/supabase_config.dart';
 
@@ -60,6 +62,18 @@ void main() async {
   LoggingService.info('Inicializando MLConsentService...');
   final mlConsentService = MLConsentService();
   LoggingService.info('MLConsentService inicializado correctamente');
+  
+  // Inicializar ConnectivityService
+  LoggingService.info('Inicializando ConnectivityService...');
+  final connectivityService = ConnectivityService();
+  await connectivityService.initialize();
+  LoggingService.info('ConnectivityService inicializado correctamente');
+  
+  // Inicializar EnhancedSyncService
+  LoggingService.info('Inicializando EnhancedSyncService...');
+  final enhancedSyncService = EnhancedSyncService();
+  await enhancedSyncService.initialize();
+  LoggingService.info('EnhancedSyncService inicializado correctamente');
   
   // Configurar dependencias circulares
   LoggingService.info('Configurando dependencias de servicios...');
