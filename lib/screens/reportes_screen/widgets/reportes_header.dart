@@ -4,10 +4,14 @@ import '../../../widgets/windows_button.dart';
 
 class ReportesHeader extends StatelessWidget {
   final VoidCallback onExportarPDF;
+  final VoidCallback onExportarCSV;
+  final VoidCallback onExportarJSON;
 
   const ReportesHeader({
     super.key,
     required this.onExportarPDF,
+    required this.onExportarCSV,
+    required this.onExportarJSON,
   });
 
   @override
@@ -62,12 +66,30 @@ class ReportesHeader extends StatelessWidget {
               ],
             ),
           ),
-          // Botón exportar PDF
-          WindowsButton(
-            text: 'Exportar PDF',
-            type: ButtonType.primary,
-            onPressed: onExportarPDF,
-            icon: Icons.picture_as_pdf,
+          // Botones de exportación
+          Row(
+            children: [
+              WindowsButton(
+                text: 'CSV',
+                type: ButtonType.secondary,
+                onPressed: onExportarCSV,
+                icon: Icons.table_chart,
+              ),
+              const SizedBox(width: 8),
+              WindowsButton(
+                text: 'JSON',
+                type: ButtonType.secondary,
+                onPressed: onExportarJSON,
+                icon: Icons.code,
+              ),
+              const SizedBox(width: 8),
+              WindowsButton(
+                text: 'PDF',
+                type: ButtonType.primary,
+                onPressed: onExportarPDF,
+                icon: Icons.picture_as_pdf,
+              ),
+            ],
           ),
         ],
       ),
