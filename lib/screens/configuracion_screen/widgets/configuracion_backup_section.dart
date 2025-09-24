@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/system/automated_backup_service.dart';
+import '../../../widgets/backup_restoration_dialog.dart';
 import '../functions/configuracion_functions.dart';
 
 class ConfiguracionBackupSection extends StatefulWidget {
@@ -84,9 +85,20 @@ class _ConfiguracionBackupSectionState extends State<ConfiguracionBackupSection>
                     leading: const Icon(Icons.backup, color: AppTheme.primaryColor),
                     title: Text(fileName),
                     subtitle: Text('${fileSize} MB'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: AppTheme.errorColor),
-                      onPressed: () => _deleteBackup(backup.path),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.restore, color: AppTheme.successColor),
+                          onPressed: () => _restoreBackup(backup.path, fileName),
+                          tooltip: 'Restaurar backup',
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: AppTheme.errorColor),
+                          onPressed: () => _deleteBackup(backup.path),
+                          tooltip: 'Eliminar backup',
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -106,6 +118,38 @@ class _ConfiguracionBackupSectionState extends State<ConfiguracionBackupSection>
         ConfiguracionFunctions.showWarningSnackBar(
           context,
           'Error listando backups: $e',
+        );
+      }
+    }
+  }
+
+  Future<void> _restoreBackup(String backupPath, String fileName) async {
+    try {
+      // Cerrar el diálogo actual
+      Navigator.of(context).pop();
+      
+      // Mostrar diálogo de restauración
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => BackupRestorationDialog(
+          backupPath: backupPath,
+          backupFileName: fileName,
+        ),
+      );
+      
+      if (result == true && mounted) {
+        ConfiguracionFunctions.showSuccessSnackBar(
+          context,
+          '✅ Restauración completada exitosamente',
+        );
+        // Refrescar estadísticas
+        _loadBackupStats();
+      }
+    } catch (e) {
+      if (mounted) {
+        ConfiguracionFunctions.showWarningSnackBar(
+          context,
+          'Error restaurando backup: $e',
         );
       }
     }
