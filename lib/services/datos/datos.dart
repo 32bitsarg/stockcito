@@ -133,6 +133,9 @@ class DatosService {
   String? get _currentUserId => _authService?.currentUserId;
   final LocalDatabaseService _localDb = LocalDatabaseService();
   
+  /// Getter para acceder a la instancia de LocalDatabaseService
+  LocalDatabaseService get localDb => _localDb;
+  
   // Sistema de sincronización viejo eliminado - ahora usamos EnhancedSyncService
   
   // Cache de datos para optimización

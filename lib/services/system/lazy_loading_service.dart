@@ -16,6 +16,23 @@ class LazyLoadingService {
   // Estado de carga por entidad
   final Map<String, _LoadingState> _loadingStates = {};
 
+  /// Inicializa el servicio de lazy loading
+  Future<void> initialize() async {
+    try {
+      LoggingService.info('Inicializando LazyLoadingService...');
+      
+      // Limpiar estados de carga existentes
+      _loadingStates.clear();
+      
+      // Inicializar el servicio de caché si no está inicializado
+      // El IntelligentCacheService ya es singleton, así que no necesitamos inicializarlo aquí
+      
+      LoggingService.info('LazyLoadingService inicializado correctamente');
+    } catch (e) {
+      LoggingService.error('Error inicializando LazyLoadingService: $e');
+    }
+  }
+
   /// Carga datos con lazy loading
   Future<List<T>> loadData<T>({
     required String entityKey,

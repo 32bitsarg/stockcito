@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stockcito/config/app_theme.dart';
 import 'package:stockcito/services/search/search_service.dart';
+import 'package:stockcito/services/navigation/search_navigation_service.dart';
 import 'package:stockcito/models/search_result.dart';
 import 'search_results_widget.dart';
 
@@ -29,12 +30,15 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final SearchService _searchService = SearchService();
+  final SearchNavigationService _navigationService = SearchNavigationService();
   
   List<SearchResult> _searchResults = [];
   List<String> _suggestions = [];
   bool _isSearching = false;
   bool _showSuggestions = false;
   String _currentQuery = '';
+  
+  OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
@@ -45,15 +49,108 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
 
   @override
   void dispose() {
+    _removeOverlay();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+  
+  void _createOverlay() {
+    if (_overlayEntry != null) return;
+    
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Fondo transparente para detectar clics fuera
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                print('🔍 [DEBUG] Overlay: Clic fuera del contenido');
+                _removeOverlay();
+                _focusNode.unfocus();
+              },
+            ),
+          ),
+          // Contenido del overlay
+          Positioned(
+            left: offset.dx,
+            top: offset.dy + renderBox.size.height + 8,
+            width: renderBox.size.width,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                constraints: const BoxConstraints(
+                  maxHeight: 300, // Limitar altura máxima
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppTheme.borderColor.withOpacity(0.5),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: _buildOverlayContent(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+  
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+  
+  Widget _buildOverlayContent() {
+    print('🔍 [DEBUG] GlobalSearchWidget._buildOverlayContent:');
+    print('   - Query actual: "$_currentQuery"');
+    print('   - Resultados: ${_searchResults.length}');
+    print('   - Mostrar sugerencias: $_showSuggestions');
+    print('   - Sugerencias: ${_suggestions.length}');
+    
+    if (_currentQuery.isNotEmpty && _searchResults.isNotEmpty) {
+      print('🔍 [DEBUG] Creando SearchResultsWidget con ${_searchResults.length} resultados');
+      return SingleChildScrollView(
+        child: SearchResultsWidget(
+          results: _searchResults,
+          onResultSelected: _onResultSelected,
+        ),
+      );
+    } else if (_showSuggestions && _suggestions.isNotEmpty) {
+      print('🔍 [DEBUG] Creando lista de sugerencias con ${_suggestions.length} sugerencias');
+      return SingleChildScrollView(
+        child: _buildSuggestionsList(),
+      );
+    } else {
+      print('🔍 [DEBUG] No hay contenido para mostrar');
+      return const SizedBox.shrink();
+    }
   }
 
   void _onFocusChanged() {
     setState(() {
       _showSuggestions = _focusNode.hasFocus && _currentQuery.isEmpty;
     });
+    
+    if (_focusNode.hasFocus && _currentQuery.isEmpty && _suggestions.isNotEmpty) {
+      _createOverlay();
+    }
   }
 
   Future<void> _loadSuggestions() async {
@@ -78,6 +175,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
         _currentQuery = '';
         _showSuggestions = _focusNode.hasFocus;
       });
+      _removeOverlay();
       return;
     }
 
@@ -95,6 +193,13 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
           _searchResults = results;
           _isSearching = false;
         });
+        
+        // Crear o actualizar overlay
+        if (results.isNotEmpty) {
+          _createOverlay();
+        } else {
+          _removeOverlay();
+        }
         
         // Notificar que se realizó una búsqueda
         widget.onSearchPerformed?.call(query);
@@ -115,8 +220,24 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
   }
 
   void _onResultSelected(SearchResult result) {
-    widget.onResultSelected?.call(result);
+    print('🔍 [DEBUG] GlobalSearchWidget._onResultSelected:');
+    print('   - Resultado seleccionado: ${result.title}');
+    print('   - Tipo: ${result.type}');
+    print('   - ID: ${result.id}');
+    
+    // Cerrar overlay y quitar foco
     _focusNode.unfocus();
+    _removeOverlay();
+    
+    print('🔍 [DEBUG] GlobalSearchWidget._onResultSelected: Overlay cerrado, navegando...');
+    
+    // Navegar usando el servicio de navegación
+    _navigationService.navigateToResult(context, result);
+    
+    // Llamar callback personalizado si existe
+    widget.onResultSelected?.call(result);
+    
+    print('🔍 [DEBUG] GlobalSearchWidget._onResultSelected: Navegación completada');
   }
 
   void _clearSearch() {
@@ -126,14 +247,12 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
       _currentQuery = '';
       _showSuggestions = _focusNode.hasFocus;
     });
+    _removeOverlay();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Campo de búsqueda
-        Container(
+    return Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -200,53 +319,6 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
               ),
             ),
           ),
-        ),
-
-        // Resultados o sugerencias
-        if (_currentQuery.isNotEmpty && _searchResults.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.borderColor.withOpacity(0.5),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SearchResultsWidget(
-              results: _searchResults,
-              onResultSelected: _onResultSelected,
-            ),
-          )
-        else if (_showSuggestions && _suggestions.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.borderColor.withOpacity(0.5),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: _buildSuggestionsList(),
-          ),
-      ],
     );
   }
 

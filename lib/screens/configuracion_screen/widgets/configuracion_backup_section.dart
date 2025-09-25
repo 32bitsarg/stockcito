@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/system/automated_backup_service.dart';
-import '../../../widgets/backup_restoration_dialog.dart';
+import '../../../widgets/ui/utility/backup_restoration_dialog.dart';
 import '../functions/configuracion_functions.dart';
 
 class ConfiguracionBackupSection extends StatefulWidget {

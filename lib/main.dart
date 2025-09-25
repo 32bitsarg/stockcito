@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'dart:io';
 import 'screens/splash_screen.dart';
 import 'services/ui/theme_service.dart';
@@ -19,14 +21,37 @@ import 'services/system/sentry_service.dart';
 import 'services/system/intelligent_cache_service.dart';
 import 'services/system/lazy_loading_service.dart';
 import 'services/system/automated_backup_service.dart';
-import 'widgets/window_manager_wrapper.dart';
+import 'widgets/custom_window_wrapper.dart';
 import 'config/supabase_config.dart';
 import 'config/sentry_config.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Configurar window_manager básico
+  await windowManager.ensureInitialized();
+  
+  // Configuración básica de ventana
+  await windowManager.setSize(const Size(1000, 800));
+  await windowManager.setMinimumSize(const Size(1000, 800)); // Tamaño mínimo
+  await windowManager.setResizable(true); // Permitir redimensionamiento
+  await windowManager.center();
+  
+  // Configuración adicional de SystemChrome
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+  
+  await windowManager.waitUntilReadyToShow();
+  await windowManager.show();
+  await windowManager.focus();
   
   // Inicializar Sentry primero para capturar cualquier error durante el startup
   await SentryService().initialize();
@@ -98,7 +123,7 @@ void main() async {
   
   // Inicializar LazyLoadingService
   LoggingService.info('Inicializando LazyLoadingService...');
-  final lazyLoadingService = LazyLoadingService();
+  LazyLoadingService();
   LoggingService.info('LazyLoadingService inicializado correctamente');
 
   // Inicializar AutomatedBackupService
@@ -174,7 +199,7 @@ class MyApp extends StatelessWidget {
           );
           
           return Platform.isWindows 
-            ? WindowManagerWrapper(child: app)
+            ? CustomWindowWrapper(child: app)
             : app;
         },
       ),

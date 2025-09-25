@@ -145,7 +145,7 @@ class VentasFiltersWidget extends StatelessWidget {
               borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
             ),
             filled: true,
-            fillColor: AppTheme.backgroundColor,
+            fillColor: Colors.white,
           ),
         ),
       ],

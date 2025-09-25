@@ -3,7 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../models/categoria.dart';
 import '../../../../models/producto.dart';
-import '../../../../widgets/animated_widgets.dart';
+import '../../../../widgets/ui/utility/animated_widgets.dart';
 import '../../../../functions/categoria_functions.dart';
 import 'categoria_list_widget.dart';
 import 'categoria_form_modal.dart';

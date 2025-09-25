@@ -4,10 +4,10 @@ import '../../../config/app_theme.dart';
 import '../../../services/ai/ai_insights_service.dart';
 import '../../../services/datos/smart_alerts_service.dart';
 import '../../../services/system/logging_service.dart';
-import '../../../widgets/simple_recommendations_widget.dart';
-import '../../../widgets/ml_customer_analysis_widget.dart';
-import '../../../widgets/mini_chart_widget.dart';
-import '../../../widgets/progress_indicators_widget.dart';
+import '../../../widgets/ui/ai/simple_recommendations_widget.dart';
+import '../../../widgets/ui/ai/ml_customer_analysis_widget.dart';
+import '../../../widgets/ui/utility/mini_chart_widget.dart';
+import '../../../widgets/ui/utility/progress_indicators_widget.dart';
 import '../../../services/export/export_service.dart';
 
 class DashboardAISidebar extends StatefulWidget {

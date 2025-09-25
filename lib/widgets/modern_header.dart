@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../config/app_theme.dart';
-import '../services/auth/supabase_auth_service.dart';
-import '../screens/auth/login_screen.dart';
+import '../services/ui/header/header_data_service.dart';
+import 'ui/header/header_title_section.dart';
+import 'ui/header/header_user_section.dart';
+import 'search/global_search_widget.dart';
 
-class ModernHeader extends StatelessWidget {
+class ModernHeader extends StatefulWidget {
   final String title;
   final String? subtitle;
   final TextEditingController? searchController;
@@ -12,8 +13,10 @@ class ModernHeader extends StatelessWidget {
   final List<Widget>? actions;
   final bool showNotifications;
   final bool showUserInfo;
+  final bool showGreeting;
+  final String? context;
 
-  ModernHeader({
+  const ModernHeader({
     super.key,
     required this.title,
     this.subtitle,
@@ -22,316 +25,190 @@ class ModernHeader extends StatelessWidget {
     this.actions,
     this.showNotifications = true,
     this.showUserInfo = true,
+    this.showGreeting = false,
+    this.context,
   });
 
-  final SupabaseAuthService _authService = SupabaseAuthService();
+  @override
+  State<ModernHeader> createState() => _ModernHeaderState();
+}
+
+class _ModernHeaderState extends State<ModernHeader> {
+  final HeaderDataService _dataService = HeaderDataService();
+
+  HeaderInfo? _headerInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    print('🔍 [DEBUG] ModernHeader initState: title="${widget.title}", subtitle="${widget.subtitle}"');
+    _loadHeaderData();
+  }
+
+  @override
+  void didUpdateWidget(ModernHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    print('🔍 [DEBUG] ModernHeader didUpdateWidget:');
+    print('   - Old title: "${oldWidget.title}"');
+    print('   - New title: "${widget.title}"');
+    print('   - Old subtitle: "${oldWidget.subtitle}"');
+    print('   - New subtitle: "${widget.subtitle}"');
+    
+    if (oldWidget.title != widget.title || oldWidget.subtitle != widget.subtitle) {
+      print('   - Title/Subtitle changed, reloading header data');
+      _loadHeaderData();
+    }
+  }
+
+  void _loadHeaderData() {
+    try {
+      // Obtener información del header
+      _headerInfo = _dataService.getHeaderInfo(
+        title: widget.title,
+        subtitle: widget.subtitle,
+        context: widget.context,
+        showSearch: widget.searchController != null,
+        showUserInfo: widget.showUserInfo,
+      );
+
+      setState(() {});
+    } catch (e) {
+      // Manejar error silenciosamente
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_headerInfo == null) {
+      return _buildLoadingHeader();
+    }
+
     return Container(
-      height: 80,
+      height: 80, // Altura más compacta
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        children: [
+          // Sección de título con saludo - Flexible
+          Expanded(
+            flex: 3,
+              child: HeaderTitleSection(
+                title: _headerInfo!.title,
+                subtitle: _headerInfo!.subtitle,
+              ),
+          ),
+
+          const SizedBox(width: 8),
+
+          // Sección de búsqueda - Tamaño fijo
+          if (widget.searchController != null)
+            SizedBox(
+              width: 250,
+              child: GlobalSearchWidget(
+                hintText: _headerInfo!.searchSuggestions.isNotEmpty
+                    ? _headerInfo!.searchSuggestions.first
+                    : 'Buscar productos, clientes...',
+                onSearchPerformed: widget.onSearch,
+                showSuggestions: true,
+                showHistory: true,
+              ),
+            ),
+
+          if (widget.searchController != null) const SizedBox(width: 8),
+
+          // Sección de acciones - Compacta
+          if (widget.actions != null) ...[
+            ...widget.actions!.map((action) => 
+              SizedBox(
+                width: 42,
+                height: 42,
+                child: action,
+              )
+            ),
+            const SizedBox(width: 8),
+          ],
+
+          // Sección de usuario - Compacta
+          HeaderUserSection(
+            showUserInfo: widget.showUserInfo,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingHeader() {
+    return Container(
+      height: 100,
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Title section
+          // Título de carga
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
+                Container(
+                  height: 24,
+                  width: 200,
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderColor.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                const SizedBox(height: 8),
+                Container(
+                  height: 16,
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: AppTheme.borderColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                ],
+                ),
               ],
             ),
           ),
-          
-          // Search bar
-          if (searchController != null) ...[
-            Container(
-              width: 320,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppTheme.backgroundColor,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: AppTheme.borderColor,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TextField(
-                controller: searchController,
-                onSubmitted: (value) => onSearch?.call(value),
-                decoration: InputDecoration(
-                  hintText: 'Buscar productos, clientes...',
-                  hintStyle: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                  ),
-                  prefixIcon: const Icon(
-                    FontAwesomeIcons.magnifyingGlass,
-                    color: AppTheme.textSecondary,
-                    size: 20,
-                  ),
-                  suffixIcon: searchController!.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(
-                            FontAwesomeIcons.xmark,
-                            color: AppTheme.textSecondary,
-                            size: 18,
-                          ),
-                          onPressed: () {
-                            searchController!.clear();
-                            onSearch?.call('');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                ),
-              ),
+
+          const SizedBox(width: 24),
+
+          // Búsqueda de carga
+          Container(
+            width: 400,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.borderColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(width: 16),
-          ],
-          
-          // Actions
-          if (actions != null) ...[
-            Row(
-              children: actions!,
+          ),
+
+          const SizedBox(width: 24),
+
+          // Usuario de carga
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppTheme.borderColor.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 16),
-          ],
-          
-          // Notificaciones (opcional)
-         
-          // Información del usuario y logout (opcional)
-          if (showUserInfo) 
-            _buildUserInfo(context)
-          else
-            // Profile section original (solo icono)
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                FontAwesomeIcons.user,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildUserInfo(BuildContext context) {
-    final isAnonymous = _authService.isAnonymous;
-    final userName = _authService.currentUserName;
-    final userEmail = _authService.currentUserEmail;
-    
-    // Obtener nombre o email del usuario
-    String displayName = 'Usuario';
-    if (isAnonymous) {
-      displayName = 'Invitado';
-    } else if (userName != null && userName.isNotEmpty) {
-      displayName = userName;
-    } else if (userEmail != null && userEmail.isNotEmpty) {
-      displayName = userEmail;
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Información del usuario (solo texto)
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Icono del usuario
-            Icon(
-              isAnonymous ? FontAwesomeIcons.userSecret : FontAwesomeIcons.user,
-              color: isAnonymous ? AppTheme.warningColor : AppTheme.primaryColor,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
-            
-            // Nombre del usuario
-            Text(
-              displayName,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: isAnonymous ? AppTheme.warningColor : AppTheme.primaryColor,
-              ),
-            ),
-          ],
-        ),
-        
-        const SizedBox(width: 8),
-        
-        // Botón de logout
-        GestureDetector(
-          onTap: () => _showLogoutDialog(context),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.errorColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppTheme.errorColor.withOpacity(0.3),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Icon(
-              FontAwesomeIcons.rightFromBracket,
-              color: AppTheme.errorColor,
-              size: 16,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          backgroundColor: AppTheme.surfaceColor,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.errorColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  FontAwesomeIcons.rightFromBracket,
-                  color: AppTheme.errorColor,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Cerrar Sesión',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            '¿Estás seguro de que quieres cerrar sesión?',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppTheme.textSecondary,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.textSecondary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.of(context).pop(); // Cerrar diálogo
-                await _authService.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    (route) => false,
-                  );
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.errorColor,
-                foregroundColor: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              ),
-              child: const Text(
-                'Cerrar Sesión',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }

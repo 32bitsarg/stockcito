@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/cliente.dart';
-import '../../../widgets/windows_button.dart';
+import '../../../widgets/ui/utility/windows_button.dart';
 import '../functions/clientes_functions.dart';
 
 class ClientesLista extends StatelessWidget {

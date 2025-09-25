@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
-import '../../../widgets/windows_button.dart';
+import '../../../widgets/ui/utility/windows_button.dart';
 
 class ReportesHeader extends StatelessWidget {
   final VoidCallback onExportarPDF;

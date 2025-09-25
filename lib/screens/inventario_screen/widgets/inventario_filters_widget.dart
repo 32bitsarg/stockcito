@@ -116,7 +116,7 @@ class InventarioFiltersWidget extends StatelessWidget {
                 borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
               ),
               filled: true,
-              fillColor: AppTheme.backgroundColor,
+              fillColor: Colors.white,
             ),
             onChanged: onBusquedaChanged,
             controller: TextEditingController(text: busqueda),
@@ -156,57 +156,6 @@ class InventarioFiltersWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterDropdown(
-    BuildContext context,
-    String label,
-    String value,
-    List<String> items,
-    Function(String) onChanged,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: value,
-          items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              onChanged(value);
-            }
-          },
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppTheme.borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppTheme.borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
-            ),
-            filled: true,
-            fillColor: AppTheme.backgroundColor,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildStockBajoFilter(BuildContext context) {
     return Column(
@@ -223,7 +172,7 @@ class InventarioFiltersWidget extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.backgroundColor,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: mostrarSoloStockBajo ? AppTheme.primaryColor : AppTheme.borderColor,
@@ -324,7 +273,7 @@ class InventarioFiltersWidget extends StatelessWidget {
               borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
             ),
             filled: true,
-            fillColor: AppTheme.backgroundColor,
+            fillColor: Colors.white,
           ),
         ),
       ],
@@ -435,7 +384,7 @@ class InventarioFiltersWidget extends StatelessWidget {
               borderSide: BorderSide(color: AppTheme.primaryColor, width: 2),
             ),
             filled: true,
-            fillColor: AppTheme.backgroundColor,
+            fillColor: Colors.white,
           ),
         ),
       ],

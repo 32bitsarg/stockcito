@@ -1299,4 +1299,122 @@ class LocalDatabaseService {
       _database = null;
     }
   }
+
+  // ==================== LIMPIEZA DE DATOS DE USUARIO ====================
+
+  /// Elimina todos los datos de un usuario específico
+  Future<bool> deleteAllDataForUser(String userId) async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      
+      try {
+        // Iniciar transacción para asegurar atomicidad
+        await db.transaction((txn) async {
+          // Eliminar productos del usuario
+          await txn.delete(
+            'productos',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar ventas del usuario
+          await txn.delete(
+            'ventas',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar clientes del usuario
+          await txn.delete(
+            'clientes',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar categorías del usuario
+          await txn.delete(
+            'categorias',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar tallas del usuario
+          await txn.delete(
+            'tallas',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar costos directos del usuario
+          await txn.delete(
+            'costos_directos',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+          
+          // Eliminar costos indirectos del usuario
+          await txn.delete(
+            'costos_indirectos',
+            where: 'user_id = ?',
+            whereArgs: [userId],
+          );
+        });
+        
+        LoggingService.info('✅ Todos los datos eliminados para usuario: $userId');
+        return true;
+      } catch (e) {
+        LoggingService.error('❌ Error eliminando datos del usuario $userId: $e');
+        return false;
+      }
+    }, 'deleteAllDataForUser', defaultValue: false);
+  }
+
+  /// Elimina datos anónimos antiguos (más de 30 días)
+  Future<int> deleteOldAnonymousData() async {
+    return await _handleDatabaseOperation(() async {
+      final db = await database;
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      final timestamp = thirtyDaysAgo.toIso8601String();
+      
+      int totalDeleted = 0;
+      
+      // Eliminar productos antiguos
+      totalDeleted += await db.delete(
+        'productos',
+        where: 'user_id IS NULL AND fecha_creacion < ?',
+        whereArgs: [timestamp],
+      );
+      
+      // Eliminar ventas antiguas
+      totalDeleted += await db.delete(
+        'ventas',
+        where: 'user_id IS NULL AND fecha_creacion < ?',
+        whereArgs: [timestamp],
+      );
+      
+      // Eliminar clientes antiguos
+      totalDeleted += await db.delete(
+        'clientes',
+        where: 'user_id IS NULL AND fecha_creacion < ?',
+        whereArgs: [timestamp],
+      );
+      
+      // Eliminar categorías antiguas
+      totalDeleted += await db.delete(
+        'categorias',
+        where: 'user_id IS NULL AND fecha_creacion < ?',
+        whereArgs: [timestamp],
+      );
+      
+      // Eliminar tallas antiguas
+      totalDeleted += await db.delete(
+        'tallas',
+        where: 'user_id IS NULL AND fecha_creacion < ?',
+        whereArgs: [timestamp],
+      );
+      
+      LoggingService.info('🗑️ Eliminados $totalDeleted registros antiguos');
+      return totalDeleted;
+    }, 'deleteOldAnonymousData', defaultValue: 0);
+  }
 }

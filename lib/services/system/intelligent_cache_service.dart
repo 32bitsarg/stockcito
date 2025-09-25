@@ -181,6 +181,11 @@ class IntelligentCacheService {
     }
   }
 
+  /// Alias para clear() - Limpia todo el caché
+  Future<void> clearAllCache() async {
+    await clear();
+  }
+
   /// Obtiene estadísticas del caché
   Map<String, dynamic> getStats() {
     final totalHits = _memoryHits + _diskHits + _networkHits;
