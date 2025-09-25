@@ -45,3 +45,4 @@ class InventarioProvider extends InheritedWidget {
            dataService != oldWidget.dataService;
   }
 }
+

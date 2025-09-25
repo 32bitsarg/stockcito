@@ -136,3 +136,4 @@ class InventarioStatsCards extends StatelessWidget {
     );
   }
 }
+

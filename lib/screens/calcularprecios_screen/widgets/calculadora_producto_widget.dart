@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
-import '../../../widgets/ui/utility/animated_widgets.dart';
+import '../../../widgets/animated_widgets.dart';
 import '../services/calculadora_service.dart';
 import '../models/producto_calculo.dart';
 

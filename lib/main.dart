@@ -9,10 +9,18 @@ import 'services/ui/theme_manager_service.dart';
 import 'services/ui/windows_window_service.dart';
 import 'services/system/logging_service.dart';
 import 'services/notifications/smart_notification_service.dart';
+import 'services/auth/supabase_auth_service.dart';
+import 'services/ml/ml_training_service.dart';
 import 'services/datos/datos.dart';
 import 'services/datos/dashboard_service.dart';
+import 'services/system/data_migration_service.dart';
+import 'services/ml/ml_consent_service.dart';
+import 'services/system/connectivity_service.dart';
+import 'services/datos/enhanced_sync_service.dart';
 import 'services/system/sentry_service.dart';
-import 'services/system/service_manager.dart';
+import 'services/system/intelligent_cache_service.dart';
+import 'services/system/lazy_loading_service.dart';
+import 'services/system/automated_backup_service.dart';
 import 'widgets/custom_window_wrapper.dart';
 import 'config/supabase_config.dart';
 import 'config/sentry_config.dart';
@@ -61,17 +69,84 @@ void main() async {
   await SentryConfig.load();
   LoggingService.info('Configuración de Sentry cargada');
   
-  // Inicializar todos los servicios usando ServiceManager
-  LoggingService.info('Inicializando todos los servicios...');
-  final serviceManager = ServiceManager();
-  await serviceManager.initializeAllServices();
-  LoggingService.info('Todos los servicios inicializados correctamente');
+  // Inicializar Supabase Auth
+  LoggingService.info('Inicializando Supabase Auth...');
+  final authService = SupabaseAuthService();
+  await authService.initialize();
+  LoggingService.info('Supabase Auth inicializado correctamente');
   
-  // Obtener servicios principales para compatibilidad
-  final datosService = serviceManager.getService<DatosService>('datos')!;
+  // Inicializar DatosService con dependencia de autenticación
+  LoggingService.info('Inicializando DatosService...');
+  final datosService = DatosService();
+  datosService.initializeAuthService(authService);
+  authService.initializeDatosService(datosService);
   
   // Inicializar datos de prueba si la base de datos está vacía
   await datosService.initializeSampleDataIfEmpty();
+  
+  LoggingService.info('DatosService inicializado correctamente');
+  
+  // Inicializar MLTrainingService con dependencia de DatosService
+  LoggingService.info('Inicializando MLTrainingService...');
+  final mlTrainingService = MLTrainingService();
+  datosService.initializeMLTrainingService(mlTrainingService);
+  await mlTrainingService.initialize();
+  LoggingService.info('MLTrainingService inicializado correctamente');
+  
+  // Inicializar DataMigrationService
+  LoggingService.info('Inicializando DataMigrationService...');
+  final dataMigrationService = DataMigrationService();
+  LoggingService.info('DataMigrationService inicializado correctamente');
+  
+  // Inicializar MLConsentService
+  LoggingService.info('Inicializando MLConsentService...');
+  final mlConsentService = MLConsentService();
+  LoggingService.info('MLConsentService inicializado correctamente');
+  
+  // Inicializar ConnectivityService
+  LoggingService.info('Inicializando ConnectivityService...');
+  final connectivityService = ConnectivityService();
+  await connectivityService.initialize();
+  LoggingService.info('ConnectivityService inicializado correctamente');
+  
+  // Inicializar EnhancedSyncService
+  LoggingService.info('Inicializando EnhancedSyncService...');
+  final enhancedSyncService = EnhancedSyncService();
+  await enhancedSyncService.initialize();
+  LoggingService.info('EnhancedSyncService inicializado correctamente');
+  
+  // Inicializar IntelligentCacheService
+  LoggingService.info('Inicializando IntelligentCacheService...');
+  final intelligentCacheService = IntelligentCacheService();
+  await intelligentCacheService.initialize();
+  LoggingService.info('IntelligentCacheService inicializado correctamente');
+  
+  // Inicializar LazyLoadingService
+  LoggingService.info('Inicializando LazyLoadingService...');
+  LazyLoadingService();
+  LoggingService.info('LazyLoadingService inicializado correctamente');
+
+  // Inicializar AutomatedBackupService
+  LoggingService.info('Inicializando AutomatedBackupService...');
+  final automatedBackupService = AutomatedBackupService();
+  await automatedBackupService.initialize();
+  LoggingService.info('AutomatedBackupService inicializado correctamente');
+  
+  // Configurar dependencias circulares
+  LoggingService.info('Configurando dependencias de servicios...');
+  dataMigrationService.initializeServices(
+    datosService: datosService,
+    mlTrainingService: mlTrainingService,
+    consentService: mlConsentService,
+  );
+  
+  mlConsentService.initializeServices(
+    mlTrainingService: mlTrainingService,
+    dataMigrationService: dataMigrationService,
+  );
+  
+  datosService.initializeMLConsentService(mlConsentService);
+  LoggingService.info('Dependencias de servicios configuradas correctamente');
   
   try {
     // Configurar ventana de Windows solo si es Windows

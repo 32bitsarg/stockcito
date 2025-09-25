@@ -31,3 +31,4 @@ class ConfiguracionLayoutWidget extends StatelessWidget {
     );
   }
 }
+

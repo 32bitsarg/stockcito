@@ -35,3 +35,4 @@ class ConfiguracionProvider extends StatelessWidget {
     );
   }
 }
+
