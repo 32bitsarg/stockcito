@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ml/ml_consent_service.dart';
 import 'logging_service.dart';
-import '../../widgets/ml_consent_widget.dart';
+import '../../widgets/ui/ai/ml_consent_widget.dart';
 
 /// Servicio para manejar la lógica de mostrar el consentimiento ML
 class ConsentManagerService {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../widgets/windows_button.dart';
+import '../../../widgets/ui/utility/windows_button.dart';
 
 class ConfiguracionActionButtons extends StatelessWidget {
   final VoidCallback onRestaurar;

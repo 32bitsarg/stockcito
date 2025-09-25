@@ -67,7 +67,7 @@ class InventarioHeaderWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Gestiona tu inventario de productos',
+                      'Gestaaiona tu inventario de productos',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Colors.white.withOpacity(0.9),
                       ),

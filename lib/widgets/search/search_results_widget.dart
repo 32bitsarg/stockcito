@@ -17,7 +17,12 @@ class SearchResultsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('🔍 [DEBUG] SearchResultsWidget.build:');
+    print('   - Resultados: ${results.length}');
+    print('   - Callback disponible: ${onResultSelected != null}');
+    
     if (results.isEmpty) {
+      print('🔍 [DEBUG] SearchResultsWidget.build: No hay resultados, retornando SizedBox.shrink()');
       return const SizedBox.shrink();
     }
 
@@ -26,6 +31,8 @@ class SearchResultsWidget extends StatelessWidget {
     for (final result in results) {
       groupedResults.putIfAbsent(result.type, () => []).add(result);
     }
+    
+    print('🔍 [DEBUG] SearchResultsWidget.build: Agrupados ${groupedResults.length} tipos');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -93,6 +100,10 @@ class SearchResultsWidget extends StatelessWidget {
   }
 
   Widget _buildResultGroup(BuildContext context, String type, List<SearchResult> typeResults) {
+    print('🔍 [DEBUG] SearchResultsWidget._buildResultGroup:');
+    print('   - Tipo: $type');
+    print('   - Resultados del tipo: ${typeResults.length}');
+    
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -146,7 +157,13 @@ class SearchResultsWidget extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => onResultSelected?.call(result),
+        onTap: () {
+          print('🔍 [DEBUG] SearchResultsWidget._buildResultItem: Clic en resultado');
+          print('   - Título: ${result.title}');
+          print('   - Tipo: ${result.type}');
+          print('   - Callback disponible: ${onResultSelected != null}');
+          onResultSelected?.call(result);
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(

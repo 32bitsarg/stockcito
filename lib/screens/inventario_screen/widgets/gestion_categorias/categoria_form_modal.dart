@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../models/categoria.dart';
-import '../../../../widgets/animated_widgets.dart';
+import '../../../../widgets/ui/utility/animated_widgets.dart';
 import '../../../../functions/categoria_functions.dart';
 import '../../../../services/datos/datos.dart';
 import '../../../../services/auth/supabase_auth_service.dart';

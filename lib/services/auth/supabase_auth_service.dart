@@ -7,6 +7,7 @@ import 'package:stockcito/services/datos/datos.dart';
 import 'package:stockcito/services/auth/security_service.dart';
 import 'package:stockcito/services/auth/password_validation_service.dart';
 import 'package:stockcito/services/system/sentry_service.dart';
+import 'package:stockcito/services/auth/user_migration_service.dart';
 
 /// Servicio de autenticación con Supabase
 class SupabaseAuthService {
@@ -263,7 +264,7 @@ class SupabaseAuthService {
     }
   }
 
-  /// Convierte cuenta anónima a cuenta permanente
+  /// Convierte cuenta anónima a cuenta permanente usando UserMigrationService
   Future<bool> convertAnonymousToPermanent(
     String email, 
     String password, 
@@ -275,29 +276,27 @@ class SupabaseAuthService {
         return false;
       }
 
-      LoggingService.info('Convirtiendo cuenta anónima a permanente');
+      LoggingService.info('🔄 Iniciando conversión de cuenta anónima a permanente...');
       
-      // Actualizar el email y datos del usuario
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(
-          email: email,
-          data: {
-            'full_name': displayName,
-            'is_anonymous': false,
-          },
-        ),
+      // Importar UserMigrationService dinámicamente para evitar dependencias circulares
+      final userMigrationService = UserMigrationService();
+      
+      // Ejecutar migración completa
+      final migrationResult = await userMigrationService.migrateAnonymousToAuthenticated(
+        email: email,
+        password: password,
+        displayName: displayName,
       );
       
-      // Cambiar la contraseña
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: password),
-      );
-      
-      await _saveAuthState('email', email);
-      LoggingService.info('Cuenta convertida correctamente');
-      return true;
+      if (migrationResult.success) {
+        LoggingService.info('✅ Cuenta convertida y datos migrados correctamente');
+        return true;
+      } else {
+        LoggingService.error('❌ Error en migración: ${migrationResult.error}');
+        return false;
+      }
     } catch (e) {
-      LoggingService.error('Error convirtiendo cuenta: $e');
+      LoggingService.error('❌ Error convirtiendo cuenta: $e');
       return false;
     }
   }

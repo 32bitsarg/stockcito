@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
-import '../../../widgets/animated_widgets.dart';
+import '../../../widgets/ui/utility/animated_widgets.dart';
 
 class VentasHeaderWidget extends StatelessWidget {
   final VoidCallback onNuevaVenta;

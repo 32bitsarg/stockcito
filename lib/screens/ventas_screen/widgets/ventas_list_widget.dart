@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/venta.dart';
-import '../../../widgets/animated_widgets.dart';
+import '../../../widgets/ui/utility/animated_widgets.dart';
 import '../functions/ventas_functions.dart';
 
 class VentasListWidget extends StatelessWidget {
