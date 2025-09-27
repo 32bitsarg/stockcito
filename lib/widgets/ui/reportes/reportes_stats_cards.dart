@@ -57,7 +57,7 @@ class ReportesStatsCards extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: _buildStatItem(
                   'Valor Total',
-                  '\$${valorTotal.toStringAsFixed(2)}',
+                  '\$${valorTotal.round()}',
                   FontAwesomeIcons.dollarSign,
                   const Color(0xFF10B981),
                   'valor del inventario',
@@ -136,4 +136,5 @@ class ReportesStatsCards extends StatelessWidget {
     );
   }
 }
+
 

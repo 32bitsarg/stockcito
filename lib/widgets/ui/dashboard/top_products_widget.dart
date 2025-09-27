@@ -152,7 +152,7 @@ class _TopProductsWidgetState extends State<TopProductsWidget> {
           
           // Precio
           Text(
-            '\$${(producto['precio'] as double).toStringAsFixed(2)}',
+            '\$${(producto['precio'] as double).round()}',
             style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,

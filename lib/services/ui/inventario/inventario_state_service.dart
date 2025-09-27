@@ -17,6 +17,10 @@ class InventarioStateService extends ChangeNotifier {
   bool _mostrarSoloStockBajo = false;
   bool _cargando = false;
   String? _error;
+  
+  // Estado para selección específica
+  String? _selectedProductId;
+  bool _isSelectingProduct = false;
 
   // Getters
   List<dynamic> get productos => _productos;
@@ -28,6 +32,10 @@ class InventarioStateService extends ChangeNotifier {
   bool get mostrarSoloStockBajo => _mostrarSoloStockBajo;
   bool get cargando => _cargando;
   String? get error => _error;
+  
+  // Getters para selección específica
+  String? get selectedProductId => _selectedProductId;
+  bool get isSelectingProduct => _isSelectingProduct;
 
   /// Actualizar productos
   void updateProductos(List<dynamic> productos) {
@@ -134,6 +142,81 @@ class InventarioStateService extends ChangeNotifier {
     _mostrarSoloStockBajo = false;
     LoggingService.info('🔄 Filtros reseteados');
     notifyListeners();
+  }
+
+  // ==================== MÉTODOS DE SELECCIÓN ESPECÍFICA ====================
+
+  /// Seleccionar un producto específico por ID
+  Future<bool> selectProductById(String productId) async {
+    try {
+      LoggingService.info('🎯 Seleccionando producto por ID: $productId');
+      
+      _isSelectingProduct = true;
+      notifyListeners();
+
+      // Buscar el producto en la lista actual
+      final producto = _productos.firstWhere(
+        (p) => p.id.toString() == productId,
+        orElse: () => null,
+      );
+
+      if (producto != null) {
+        _selectedProductId = productId;
+        LoggingService.info('✅ Producto encontrado y seleccionado: ${producto.nombre}');
+        
+        // Limpiar filtros para mostrar el producto
+        resetFilters();
+        
+        // Aplicar filtros específicos del producto si es necesario
+        if (producto.categoria != null && producto.categoria.isNotEmpty) {
+          updateFiltroCategoria(producto.categoria);
+        }
+        
+        _isSelectingProduct = false;
+        notifyListeners();
+        return true;
+      } else {
+        LoggingService.warning('⚠️ Producto no encontrado con ID: $productId');
+        _isSelectingProduct = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      LoggingService.error('❌ Error seleccionando producto: $e');
+      _isSelectingProduct = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Limpiar selección específica
+  void clearProductSelection() {
+    if (_selectedProductId != null || _isSelectingProduct) {
+      _selectedProductId = null;
+      _isSelectingProduct = false;
+      LoggingService.info('🔄 Selección de producto limpiada');
+      notifyListeners();
+    }
+  }
+
+  /// Verificar si un producto está seleccionado
+  bool isProductSelected(String productId) {
+    return _selectedProductId == productId;
+  }
+
+  /// Obtener el producto seleccionado
+  dynamic getSelectedProduct() {
+    if (_selectedProductId == null) return null;
+    
+    try {
+      return _productos.firstWhere(
+        (p) => p.id.toString() == _selectedProductId,
+        orElse: () => null,
+      );
+    } catch (e) {
+      LoggingService.error('❌ Error obteniendo producto seleccionado: $e');
+      return null;
+    }
   }
 
   @override

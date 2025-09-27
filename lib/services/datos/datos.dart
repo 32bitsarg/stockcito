@@ -76,7 +76,7 @@ class DatosService {
       final isAutomatic = await _consentService!.wasConsentSetAutomatically();
       
       if (hasConsent) {
-        await _mlTrainingService!.trainWithNewData();
+        await _mlTrainingService!.initialize();
         if (isAutomatic) {
           LoggingService.info('🤖 IA entrenada con datos nuevos (consentimiento automático para usuario autenticado)');
         } else {

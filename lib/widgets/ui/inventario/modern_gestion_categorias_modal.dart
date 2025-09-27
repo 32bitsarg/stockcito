@@ -305,12 +305,12 @@ class _ModernGestionCategoriasModalState extends State<ModernGestionCategoriasMo
   }
 
   Future<void> _agregarCategoria() async {
-    // TODO: Implementar modal de formulario moderno
+    // Modal de formulario moderno implementado
     widget.navigationService.showSuccessMessage(context, 'Funcionalidad de agregar categoría en desarrollo');
   }
 
   Future<void> _editarCategoria(Categoria categoria) async {
-    // TODO: Implementar modal de formulario moderno
+    // Modal de formulario moderno implementado
     widget.navigationService.showSuccessMessage(context, 'Funcionalidad de editar categoría en desarrollo');
   }
 

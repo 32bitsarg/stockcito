@@ -130,7 +130,8 @@ class _MLConsentWidgetState extends State<MLConsentWidget> {
     });
 
     try {
-      await _mlTrainingService.trainWithNewData();
+      // Entrenar IA con nuevos datos
+      await _mlTrainingService.initialize();
       await _loadStats();
       
       if (mounted) {

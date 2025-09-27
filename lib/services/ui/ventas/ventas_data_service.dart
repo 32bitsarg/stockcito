@@ -84,9 +84,19 @@ class VentasDataService {
   Future<Venta> createVenta(Venta venta) async {
     try {
       LoggingService.info('➕ Creando venta: ${venta.cliente}');
-      // Temporal: retornar la venta sin crear hasta implementar el método
+      
+      // Guardar en base de datos usando el método correcto
+      final success = await _datosService.saveVenta(venta);
+      
+      if (!success) {
+        throw Exception('Failed to save sale');
+      }
+      
+      // Retornar la venta
+      final ventaCreada = venta;
+      
       LoggingService.info('✅ Venta creada correctamente: ${venta.id}');
-      return venta;
+      return ventaCreada;
     } catch (e) {
       LoggingService.error('❌ Error creando venta: $e');
       rethrow;
@@ -97,7 +107,14 @@ class VentasDataService {
   Future<Venta> updateVenta(Venta venta) async {
     try {
       LoggingService.info('✏️ Actualizando venta: ${venta.id}');
-      final ventaActualizada = await _datosService.updateVenta(venta);
+      // Actualizar en base de datos
+      final success = await _datosService.saveVenta(venta);
+      
+      if (!success) {
+        throw Exception('Failed to update sale');
+      }
+      
+      final ventaActualizada = venta;
       LoggingService.info('✅ Venta actualizada correctamente: ${ventaActualizada.id}');
       return ventaActualizada;
     } catch (e) {

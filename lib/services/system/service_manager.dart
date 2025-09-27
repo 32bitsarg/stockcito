@@ -411,6 +411,15 @@ class ServiceManager {
       initializationRate: totalServices > 0 ? (initializedServices / totalServices) * 100 : 0,
     );
   }
+
+  // Getters para acceder a servicios específicos
+  SupabaseAuthService? get authService => _authService;
+  DatosService? get datosService => _datosService;
+  UserMigrationService? get userMigrationService => _userMigrationService;
+  UserDataCleanupService? get userDataCleanupService => _userDataCleanupService;
+  UserSessionManager? get userSessionManager => _userSessionManager;
+  DataMigrationService? get dataMigrationService => _dataMigrationService;
+  EnhancedSyncService? get enhancedSyncService => _enhancedSyncService;
 }
 
 /// Información de un servicio

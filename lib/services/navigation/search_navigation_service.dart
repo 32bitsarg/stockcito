@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:stockcito/models/search_result.dart';
+import 'package:stockcito/models/navigation_params.dart';
 import 'package:stockcito/screens/dashboard/dashboard_screen.dart';
+import 'package:stockcito/services/system/logging_service.dart';
 
 /// Servicio para manejar la navegación desde resultados de búsqueda
 class SearchNavigationService {
@@ -32,48 +34,20 @@ class SearchNavigationService {
 
   /// Navega a la pantalla de inventario y selecciona el producto
   void _navigateToProduct(BuildContext context, SearchResult result) {
-    print('🔍 [DEBUG] _navigateToProduct: Navegando a Inventario (índice 1)');
-    
-    // Navegar al dashboard con índice inicial
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const DashboardScreen(initialIndex: 1), // Index 1 = Inventario
-      ),
-      (route) => false,
-    );
-    
-    print('🔍 [DEBUG] _navigateToProduct: Navegación completada');
-    
-    // TODO: Implementar selección específica del producto en inventario
-    // Esto requeriría pasar el ID del producto y que el inventario lo seleccione automáticamente
+    LoggingService.info('🔍 Navegando a Inventario con selección de producto: ${result.id}');
+    navigateWithParams(context, NavigationParams.forProduct(result.id));
   }
 
   /// Navega a la pantalla de ventas y selecciona la venta
   void _navigateToSale(BuildContext context, SearchResult result) {
-    // Navegar al dashboard con índice inicial
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const DashboardScreen(initialIndex: 2), // Index 2 = Ventas
-      ),
-      (route) => false,
-    );
-    
-    // TODO: Implementar selección específica de la venta
-    // Esto requeriría pasar el ID de la venta y que la pantalla de ventas la seleccione automáticamente
+    LoggingService.info('🔍 Navegando a Ventas con selección de venta: ${result.id}');
+    navigateWithParams(context, NavigationParams.forSale(result.id));
   }
 
   /// Navega a la pantalla de clientes y selecciona el cliente
   void _navigateToClient(BuildContext context, SearchResult result) {
-    // Navegar al dashboard con índice inicial
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => const DashboardScreen(initialIndex: 3), // Index 3 = Clientes
-      ),
-      (route) => false,
-    );
-    
-    // TODO: Implementar selección específica del cliente
-    // Esto requeriría pasar el ID del cliente y que la pantalla de clientes lo seleccione automáticamente
+    LoggingService.info('🔍 Navegando a Clientes con selección de cliente: ${result.id}');
+    navigateWithParams(context, NavigationParams.forClient(result.id));
   }
 
   /// Muestra un diálogo para tipos no soportados
@@ -119,5 +93,17 @@ class SearchNavigationService {
       default:
         return 'Dashboard';
     }
+  }
+
+  /// Navega directamente con parámetros de navegación
+  void navigateWithParams(BuildContext context, NavigationParams params) {
+    LoggingService.info('🔍 [DEBUG] Navegando con parámetros: $params');
+    
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => DashboardScreen(navigationParams: params),
+      ),
+      (route) => false,
+    );
   }
 }

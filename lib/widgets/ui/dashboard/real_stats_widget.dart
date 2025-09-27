@@ -61,7 +61,7 @@ class _RealStatsWidgetState extends State<RealStatsWidget> {
                 'Ventas Totales',
                 _isLoadingMonto 
                     ? 'Cargando...' 
-                    : '\$${_totalVentasMonto.toStringAsFixed(2)}',
+                    : '\$${_totalVentasMonto.round()}',
                 FontAwesomeIcons.dollarSign,
                 const Color(0xFF10B981),
               ),
@@ -92,7 +92,7 @@ class _RealStatsWidgetState extends State<RealStatsWidget> {
         // Ventas del mes (tarjeta más grande)
         _buildLargeStatCard(
           'Ventas del Mes',
-          '\$${widget.ventasDelMes.toStringAsFixed(0)}',
+          '\$${widget.ventasDelMes.round()}',
           FontAwesomeIcons.chartLine,
           const Color(0xFF00FF88),
         ),

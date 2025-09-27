@@ -102,19 +102,6 @@ class VentasContentWidget extends StatelessWidget {
                     color: Color(0xFF2D2D2D),
                   ),
                 ),
-                if (onNuevaVenta != null)
-                  ElevatedButton.icon(
-                    onPressed: onNuevaVenta,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Nueva Venta'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00FF88),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

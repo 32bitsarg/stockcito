@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../services/ui/inventario/inventario_state_service.dart';
 import '../../../services/ui/inventario/inventario_navigation_service.dart';
+import '../../../services/ui/inventario/inventario_logic_service.dart';
+import '../../../services/ui/inventario/inventario_data_service.dart';
+import '../../../models/talla.dart';
 import '../utility/lazy_list_widget.dart';
 import '../../../models/producto.dart';
 import '../../../config/app_theme.dart';
 import '../dashboard/modern_card_widget.dart';
+import '../modals/size_form_modal.dart';
 import '../../../screens/inventario_screen/widgets/inventario_filters_widget.dart';
 import '../../../screens/inventario_screen/functions/inventario_functions.dart';
 import 'inventario_provider.dart';
@@ -47,7 +51,7 @@ class InventarioContentWidget extends StatelessWidget {
                   onBusquedaChanged: (busqueda) => stateService.updateBusqueda(busqueda),
                   onStockBajoChanged: (mostrar) => stateService.updateMostrarSoloStockBajo(mostrar),
                   onGestionCategorias: () => _abrirGestionCategorias(context, navigationService, stateService),
-                  onGestionTallas: () => _abrirGestionTallas(context, navigationService, stateService),
+                  onGestionTallas: () => _showSizeModal(context, stateService),
                 ),
               ),
               
@@ -293,18 +297,66 @@ class InventarioContentWidget extends StatelessWidget {
     );
   }
 
-  /// Abrir gestión de tallas
-  void _abrirGestionTallas(BuildContext context, InventarioNavigationService navigationService, InventarioStateService stateService) {
-    final logicService = InventarioProvider.ofNotNull(context).logicService;
-    
-    navigationService.showGestionTallas(
-      context,
-      tallas: stateService.tallas.cast(),
-      productos: stateService.productos.cast(),
-      onTallasChanged: (nuevasTallas) {
-        logicService.updateTallas(nuevasTallas);
-      },
-      logicService: logicService,
+  /// Mostrar modal de gestión de tallas
+  void _showSizeModal(BuildContext context, InventarioStateService stateService) {
+    showDialog(
+      context: context,
+      builder: (context) => SizeFormModal(
+        onSizeCreated: (talla) async {
+          try {
+            final logicService = InventarioProvider.ofNotNull(context).logicService;
+            final dataService = InventarioProvider.ofNotNull(context).dataService;
+            
+            await dataService.createTalla(talla);
+            await logicService.loadAllData();
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Talla creada exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al crear talla: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+        onSizeUpdated: (talla) async {
+          try {
+            final logicService = InventarioProvider.ofNotNull(context).logicService;
+            final dataService = InventarioProvider.ofNotNull(context).dataService;
+            
+            await dataService.updateTalla(talla);
+            await logicService.loadAllData();
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Talla actualizada exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al actualizar talla: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 

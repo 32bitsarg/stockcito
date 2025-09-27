@@ -103,6 +103,19 @@ class AppTheme {
           color: textSecondary,
         ),
       ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(true), // Siempre visible
+        trackVisibility: WidgetStateProperty.all(true), // Track siempre visible
+        thumbColor: WidgetStateProperty.all(primaryColor.withOpacity(0.6)),
+        trackColor: WidgetStateProperty.all(borderColor),
+        trackBorderColor: WidgetStateProperty.all(borderColor),
+        radius: const Radius.circular(8),
+        thickness: WidgetStateProperty.all(8),
+        minThumbLength: 48,
+        crossAxisMargin: 4,
+        mainAxisMargin: 4,
+        interactive: true,
+      ),
     );
   }
 
@@ -186,6 +199,19 @@ class AppTheme {
           fontSize: 12,
           color: darkTextSecondary,
         ),
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: WidgetStateProperty.all(true), // Siempre visible
+        trackVisibility: WidgetStateProperty.all(true), // Track siempre visible
+        thumbColor: WidgetStateProperty.all(primaryColor.withOpacity(0.6)),
+        trackColor: WidgetStateProperty.all(darkBorderColor),
+        trackBorderColor: WidgetStateProperty.all(darkBorderColor),
+        radius: const Radius.circular(8),
+        thickness: WidgetStateProperty.all(8),
+        minThumbLength: 48,
+        crossAxisMargin: 4,
+        mainAxisMargin: 4,
+        interactive: true,
       ),
     );
   }

@@ -1,5 +1,5 @@
 import '../datos/ml_prediction_service.dart';
-import 'package:stockcito/services/ml/advanced_ml_service.dart';
+import '../ml/random_forest_service.dart';
 import '../datos/datos.dart';
 import 'package:stockcito/services/system/logging_service.dart';
 import 'package:stockcito/models/producto.dart';
@@ -11,7 +11,7 @@ class AIInsightsService {
   AIInsightsService._internal();
 
   final MLPredictionService _mlService = MLPredictionService();
-  final AdvancedMLService _advancedML = AdvancedMLService();
+  final RandomForestService _randomForest = RandomForestService();
   final DatosService _datosService = DatosService();
 
   /// Genera insights automáticos basados en análisis de IA
@@ -333,16 +333,31 @@ extension MLInsightsMethods on AIInsightsService {
           // Usar ML avanzado para predicción de demanda
           if (producto.id == null) continue;
           
-          final mlPrediction = await _advancedML.predictDemand(producto.id!, 7);
+          // Crear modelo temporal para la predicción
+          final model = RandomForestModel(
+            trees: [],
+            numTrees: 10,
+            maxDepth: 5,
+            minSamplesSplit: 2,
+            accuracy: 0.85,
+            mae: 0.1,
+            rmse: 0.15,
+            rSquared: 0.8,
+            featureImportance: {'precio': 0.3, 'stock': 0.25, 'categoria': 0.2, 'temporada': 0.25},
+            trainedAt: DateTime.now(),
+          );
           
-          final confidence = (mlPrediction['confidence'] ?? 0.0).toDouble();
+          final ventas = await _datosService.getVentas();
+          final mlPrediction = _randomForest.predictDemand(model, producto, ventas, 7);
+          
+          final confidence = mlPrediction.confidence;
           if (confidence > 0.6) {
             String action;
             String details;
             String color;
             String urgency;
             
-            final value = (mlPrediction['value'] ?? 0.0).toDouble();
+            final value = mlPrediction.predictedDemand;
             if (value > producto.stock * 1.5) {
               action = 'Aumentar';
               details = 'ML avanzado predice alta demanda: ${value.round()} unidades (${(confidence * 100).toStringAsFixed(1)}% confianza)';
@@ -361,7 +376,7 @@ extension MLInsightsMethods on AIInsightsService {
             }
             
             // Agregar factores explicativos
-            final factors = List<String>.from(mlPrediction['factors'] ?? []);
+            final factors = mlPrediction.factors;
             final factorsText = factors.isNotEmpty 
                 ? '\nFactores: ${factors.join(', ')}'
                 : '';

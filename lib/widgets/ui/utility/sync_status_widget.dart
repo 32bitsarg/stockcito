@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/connectivity_enums.dart';
+import '../../../services/datos/enhanced_sync_service.dart';
+import '../../../services/system/connectivity_service.dart';
 
-/// Widget simplificado que muestra el estado de sincronización
+/// Widget que muestra el estado real de sincronización usando EnhancedSyncService
 class SyncStatusWidget extends StatefulWidget {
   final bool showDetails;
   final bool showAnimation;
@@ -26,128 +28,114 @@ class _SyncStatusWidgetState extends State<SyncStatusWidget>
   late AnimationController _animationController;
   late Animation<double> _rotationAnimation;
   
+  final EnhancedSyncService _syncService = EnhancedSyncService();
+  final ConnectivityService _connectivityService = ConnectivityService();
+  StreamSubscription<ConnectivityInfo>? _connectivitySubscription;
+  
   SyncStatus _currentStatus = SyncStatus.synced;
   int _pendingOperations = 0;
-  Timer? _statusTimer;
+  bool _isOnline = true;
 
   @override
   void initState() {
     super.initState();
-    print('🚀 [SYNC WIDGET] initState() llamado');
-    try {
-      // Usar WidgetsBinding para asegurar que el contexto esté listo
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          _setupAnimation();
-          _simulateSyncStatus();
-          print('✅ [SYNC WIDGET] Inicialización completada');
-        }
-      });
-    } catch (e) {
-      print('❌ [SYNC WIDGET] Error en initState: $e');
-    }
+    _setupAnimation();
+    _initializeSync();
   }
 
   void _setupAnimation() {
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+    
+    _rotationAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.linear,
+    ));
+  }
+
+  Future<void> _initializeSync() async {
     try {
-      if (!mounted) return;
+      // Inicializar servicios
+      await _connectivityService.initialize();
+      await _syncService.initialize();
       
-      _animationController = AnimationController(
-        duration: const Duration(seconds: 2),
-        vsync: this,
+      // Obtener estado inicial
+      _isOnline = _connectivityService.isOnline;
+      _pendingOperations = _syncService.pendingOperations;
+      _currentStatus = _syncService.syncStatus;
+      
+      // Suscribirse a cambios de conectividad
+      _connectivitySubscription = _connectivityService.connectivityStream.listen(
+        _onConnectivityChanged,
+        onError: (error) {
+          print('❌ [SYNC WIDGET] Error en stream de conectividad: $error');
+        },
       );
       
-      _rotationAnimation = Tween<double>(
-        begin: 0,
-        end: 1,
-      ).animate(CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.linear,
-      ));
-
-      // Solo iniciar animación si está habilitada y el widget está montado
-      if (widget.showAnimation && mounted) {
-        _animationController.repeat();
+      if (mounted) {
+        setState(() {});
       }
     } catch (e) {
-      print('❌ [SYNC WIDGET] Error configurando animación: $e');
+      print('❌ [SYNC WIDGET] Error inicializando sincronización: $e');
     }
   }
 
-  void _simulateSyncStatus() {
-    // Simular estado de sincronización - por ahora siempre sincronizado
-    setState(() {
-      _currentStatus = SyncStatus.synced;
-      _pendingOperations = 0;
-    });
+  void _onConnectivityChanged(ConnectivityInfo info) {
+    if (!mounted) return;
     
-    // Opcional: cambiar estado cada 45 segundos para testing
-    _statusTimer = Timer.periodic(const Duration(seconds: 45), (timer) {
-      if (mounted) {
-        setState(() {
-          if (_currentStatus == SyncStatus.synced) {
-            _currentStatus = SyncStatus.pending;
-            _pendingOperations = 3;
-          } else {
-            _currentStatus = SyncStatus.synced;
-            _pendingOperations = 0;
-          }
-        });
+    _isOnline = info.hasInternet;
+    
+    // Actualizar estado de sincronización
+    _pendingOperations = _syncService.pendingOperations;
+    _currentStatus = _syncService.syncStatus;
+    
+    // Controlar animación basada en el estado
+    if (widget.showAnimation) {
+      if (_currentStatus == SyncStatus.syncing && !_animationController.isAnimating) {
+        _animationController.repeat();
+      } else if (_currentStatus != SyncStatus.syncing && _animationController.isAnimating) {
+        _animationController.stop();
       }
-    });
+    }
+    
+    setState(() {});
+    
+    print('🔍 [SYNC WIDGET] Estado actualizado: $_currentStatus, Pendientes: $_pendingOperations, Online: $_isOnline');
   }
 
   @override
   void dispose() {
-    print('🛑 [SYNC WIDGET] dispose() llamado');
-    try {
-      _statusTimer?.cancel();
-      _statusTimer = null;
-      if (_animationController.isAnimating) {
-        _animationController.stop();
-      }
-      _animationController.dispose();
-      print('✅ [SYNC WIDGET] dispose() completado');
-    } catch (e) {
-      print('❌ [SYNC WIDGET] Error en dispose: $e');
-    }
+    _connectivitySubscription?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🔍 [SYNC WIDGET] build() llamado - Status: $_currentStatus, Pending: $_pendingOperations');
-    
-    // Guard para evitar builds cuando el widget no está montado
-    if (!mounted) {
-      return const SizedBox.shrink();
-    }
-    
-    try {
-      return Container(
-        padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildStatusIcon(),
-            if (widget.showDetails) ...[
-              const SizedBox(width: 8),
-              _buildStatusText(),
-            ],
+    return Container(
+      padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildStatusIcon(),
+          if (widget.showDetails) ...[
+            const SizedBox(width: 8),
+            _buildStatusText(),
           ],
-        ),
-      );
-    } catch (e) {
-      print('❌ [SYNC WIDGET] Error en build: $e');
-      return const SizedBox.shrink();
-    }
+        ],
+      ),
+    );
   }
 
   Widget _buildStatusIcon() {
     final icon = _getStatusIcon();
     final color = _getStatusColor();
     
-    // Crear el icono base una sola vez
     final baseIcon = FaIcon(
       icon,
       size: 16,

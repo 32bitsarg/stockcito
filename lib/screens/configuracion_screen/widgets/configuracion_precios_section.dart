@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import '../functions/configuracion_functions.dart';
+import '../../../config/app_theme.dart';
 import 'configuracion_card.dart';
 import 'configuracion_controls.dart';
 
 class ConfiguracionPreciosSection extends StatelessWidget {
   final double margenDefecto;
   final double iva;
-  final String moneda;
   final Function(double) onMargenChanged;
   final Function(double) onIvaChanged;
-  final Function(String) onMonedaChanged;
 
   const ConfiguracionPreciosSection({
     super.key,
     required this.margenDefecto,
     required this.iva,
-    required this.moneda,
     required this.onMargenChanged,
     required this.onIvaChanged,
-    required this.onMonedaChanged,
   });
 
   @override
@@ -47,12 +43,33 @@ class ConfiguracionPreciosSection extends StatelessWidget {
           onIvaChanged,
         ),
         const SizedBox(height: 20),
-        ConfiguracionControls.buildDropdownConfig(
-          context,
-          'Moneda',
-          moneda,
-          ConfiguracionFunctions.getMonedas(),
-          (value) => onMonedaChanged(value!),
+        // Información de moneda fija
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.infoColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppTheme.infoColor.withOpacity(0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: AppTheme.infoColor,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Moneda: Peso Argentino (ARS)',
+                  style: TextStyle(
+                    color: AppTheme.infoColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

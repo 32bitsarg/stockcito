@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/ui/header/header_data_service.dart';
-import '../../../services/ui/header/header_navigation_service.dart';
 import 'header_title_section.dart';
-import 'header_actions_section.dart';
 import 'header_user_section.dart';
 import '../../search/global_search_widget.dart';
 
-/// Header moderno refactorizado siguiendo el estilo de Eduplex
+/// Header moderno simplificado - Solo búsqueda global y cerrar sesión
 class ModernHeaderRefactored extends StatefulWidget {
   final String title;
   final String? subtitle;
   final String? context;
   final Function(String)? onSearch;
-  final List<Widget>? customActions;
   final bool showSearch;
   final bool showUserInfo;
-  final bool showGreeting;
-  final bool showNotifications;
-  final String? notificationBadge;
 
   const ModernHeaderRefactored({
     super.key,
@@ -26,12 +20,8 @@ class ModernHeaderRefactored extends StatefulWidget {
     this.subtitle,
     this.context,
     this.onSearch,
-    this.customActions,
     this.showSearch = true,
     this.showUserInfo = true,
-    this.showGreeting = false,
-    this.showNotifications = true,
-    this.notificationBadge,
   });
 
   @override
@@ -40,15 +30,24 @@ class ModernHeaderRefactored extends StatefulWidget {
 
 class _ModernHeaderRefactoredState extends State<ModernHeaderRefactored> {
   final HeaderDataService _dataService = HeaderDataService();
-  final HeaderNavigationService _navigationService = HeaderNavigationService();
-
   HeaderInfo? _headerInfo;
-  List<HeaderNavigationAction> _actions = [];
 
   @override
   void initState() {
     super.initState();
     _loadHeaderData();
+  }
+
+  @override
+  void didUpdateWidget(ModernHeaderRefactored oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Recargar datos si cambió el contexto, título o subtítulo
+    if (oldWidget.context != widget.context ||
+        oldWidget.title != widget.title ||
+        oldWidget.subtitle != widget.subtitle) {
+      _loadHeaderData();
+    }
   }
 
   void _loadHeaderData() {
@@ -60,12 +59,6 @@ class _ModernHeaderRefactoredState extends State<ModernHeaderRefactored> {
         context: widget.context,
         showSearch: widget.showSearch,
         showUserInfo: widget.showUserInfo,
-      );
-
-      // Obtener acciones para la pantalla actual
-      _actions = _navigationService.getActionsForScreen(
-        context,
-        widget.context ?? 'default',
       );
 
       setState(() {});
@@ -81,86 +74,67 @@ class _ModernHeaderRefactoredState extends State<ModernHeaderRefactored> {
     }
 
     return Container(
-      height: 100, // Altura aumentada para estilo Eduplex
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      decoration: BoxDecoration(
+      height: 80, // Altura reducida para diseño plano
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE5E7EB), // Gris claro para separación sutil
+            width: 1,
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 40,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Row(
         children: [
-          // Sección de título con saludo
-          HeaderTitleSection(
-            title: _headerInfo!.title,
-            subtitle: _headerInfo!.subtitle,
-            showGreeting: widget.showGreeting,
-            userName: _headerInfo!.userInfo.displayName,
+          // Sección de título - Flexible pero con mínimo
+          Flexible(
+            flex: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
+              child: HeaderTitleSection(
+                title: _headerInfo!.title,
+                subtitle: _headerInfo!.subtitle,
+                showGreeting: false, // Simplificado - sin saludo
+                userName: _headerInfo!.userInfo.displayName,
+              ),
+            ),
           ),
 
-          const SizedBox(width: 24),
+          const SizedBox(width: 16),
 
-          // Sección de búsqueda
-          if (widget.showSearch)
-            GlobalSearchWidget(
-              hintText: _headerInfo!.searchSuggestions.isNotEmpty
-                  ? _headerInfo!.searchSuggestions.first
-                  : 'Buscar...',
-              onSearchPerformed: widget.onSearch,
-              showSuggestions: true,
-              showHistory: true,
+          // Búsqueda global centrada
+          Expanded(
+            flex: 2, // Más espacio para la búsqueda
+            child: Center(
+              child: widget.showSearch
+                  ? ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 300,
+                        maxWidth: 500,
+                      ),
+                      child: GlobalSearchWidget(
+                        hintText: _headerInfo!.searchSuggestions.isNotEmpty
+                            ? _headerInfo!.searchSuggestions.first
+                            : 'Buscar...',
+                        onSearchPerformed: widget.onSearch,
+                        showSuggestions: true,
+                        showHistory: true,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
+          ),
 
-          if (widget.showSearch) const SizedBox(width: 24),
+          const SizedBox(width: 16),
 
-          // Sección de acciones
-          if (_actions.isNotEmpty || widget.customActions != null)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Acciones personalizadas
-                  if (widget.customActions != null) ...[
-                    ...widget.customActions!,
-                    const SizedBox(width: 16),
-                  ],
-
-                  // Acciones del servicio de navegación
-                  if (_actions.isNotEmpty)
-                    HeaderActionsSection(
-                      actions: _actions,
-                      showNotifications: widget.showNotifications,
-                      notificationBadge: widget.notificationBadge,
-                    ),
-
-                  const SizedBox(width: 16),
-
-                  // Sección de usuario
-                  HeaderUserSection(
-                    showUserInfo: widget.showUserInfo,
-                  ),
-                ],
-              ),
-            )
-          else
-            // Solo sección de usuario si no hay acciones
-            HeaderUserSection(
+          // Botón "Cerrar Sesión" en la esquina derecha
+          Container(
+            margin: const EdgeInsets.only(right: 16), // 16px del borde derecho
+            child: HeaderUserSection(
               showUserInfo: widget.showUserInfo,
             ),
+          ),
         ],
       ),
     );
@@ -168,72 +142,86 @@ class _ModernHeaderRefactoredState extends State<ModernHeaderRefactored> {
 
   Widget _buildLoadingHeader() {
     return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-      decoration: BoxDecoration(
+      height: 80, // Altura reducida para diseño plano
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE5E7EB), // Gris claro para separación sutil
+            width: 1,
           ),
-        ],
+        ),
       ),
       child: Row(
         children: [
-          // Título de carga
+          // Título de carga - Flexible pero con mínimo
+          Flexible(
+            flex: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 150, maxWidth: 250),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    height: 20,
+                    width: 180,
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 14,
+                    width: 120,
+                    decoration: BoxDecoration(
+                      color: AppTheme.borderColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Búsqueda de carga centrada
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  height: 24,
-                  width: 200,
-                  decoration: BoxDecoration(
-                    color: AppTheme.borderColor.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 16,
-                  width: 150,
-                  decoration: BoxDecoration(
-                    color: AppTheme.borderColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ],
+            flex: 2,
+            child: Center(
+              child: widget.showSearch
+                  ? ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minWidth: 300,
+                        maxWidth: 500,
+                      ),
+                      child: Container(
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppTheme.borderColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
-
-          const SizedBox(width: 24),
-
-          // Búsqueda de carga
+          
+          const SizedBox(width: 16),
+          
+          // Botón "Cerrar Sesión" de carga
           Container(
-            width: 400,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppTheme.borderColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(24),
-            ),
-          ),
-
-          const SizedBox(width: 24),
-
-          // Usuario de carga
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.borderColor.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(20),
+            margin: const EdgeInsets.only(right: 16),
+            child: Container(
+              height: 32,
+              width: 100,
+              decoration: BoxDecoration(
+                color: AppTheme.borderColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
         ],

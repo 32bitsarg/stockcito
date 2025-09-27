@@ -1,9 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/datos/smart_alerts_service.dart';
 import '../../../services/ml/ml_consent_service.dart';
-import '../../../services/system/export_service.dart';
 
 class ConfiguracionFunctions {
   /// Carga la configuración desde SharedPreferences
@@ -19,7 +21,7 @@ class ConfiguracionFunctions {
         'notificacionesVentas': prefs.getBool('notificaciones_ventas') ?? false,
         'margenDefecto': prefs.getDouble('margen_defecto') ?? 50.0,
         'iva': prefs.getDouble('iva') ?? 21.0,
-        'moneda': prefs.getString('moneda') ?? 'USD',
+        'moneda': prefs.getString('moneda') ?? 'ARS',
         'exportarAutomatico': prefs.getBool('exportar_automatico') ?? false,
         'respaldoAutomatico': prefs.getBool('respaldo_automatico') ?? true,
         'mlConsentimiento': hasConsent,
@@ -75,7 +77,7 @@ class ConfiguracionFunctions {
       'notificacionesVentas': false,
       'margenDefecto': 50.0,
       'iva': 21.0,
-      'moneda': 'USD',
+      'moneda': 'ARS',
       'exportarAutomatico': false,
       'respaldoAutomatico': true,
       'mlConsentimiento': false,
@@ -87,15 +89,11 @@ class ConfiguracionFunctions {
     return _getDefaultConfiguracion();
   }
 
-  /// Obtiene las monedas disponibles
+  /// Obtiene las monedas disponibles (solo peso argentino)
   static List<String> getMonedas() {
-    return ['USD', 'EUR', 'ARS', 'MXN', 'COP', 'BRL', 'CLP'];
+    return ['ARS'];
   }
 
-  /// Obtiene los temas disponibles
-  static List<String> getTemas() {
-    return ['Claro', 'Oscuro', 'Automático'];
-  }
 
   /// Muestra un SnackBar de éxito
   static void showSuccessSnackBar(BuildContext context, String message) {
@@ -154,43 +152,39 @@ class ConfiguracionFunctions {
     return value.toStringAsFixed(decimals);
   }
 
-  /// Obtiene el icono para un tema
-  static IconData getTemaIcon(String tema) {
-    switch (tema) {
-      case 'Claro':
-        return Icons.light_mode;
-      case 'Oscuro':
-        return Icons.dark_mode;
-      case 'Automático':
-        return Icons.auto_mode;
-      default:
-        return Icons.auto_mode;
-    }
-  }
 
-  /// Obtiene el color para un tema
-  static Color getTemaColor(String tema, bool isSelected) {
-    if (isSelected) {
-      return AppTheme.primaryColor;
-    }
-    return AppTheme.textSecondary;
-  }
-
-  /// Exporta la configuración a JSON
+  /// Exporta la configuración a JSON (usando el sistema anterior temporalmente)
   static Future<String> exportarConfiguracion(Map<String, dynamic> config) async {
     try {
-      final exportService = ExportService();
-      return await exportService.exportConfiguracionToJSON(config);
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'configuracion_${DateTime.now().millisecondsSinceEpoch}.json';
+      final file = File('${directory.path}/$fileName');
+
+      final configData = {
+        'version': '1.1.0-alpha.1',
+        'fecha_exportacion': DateTime.now().toIso8601String(),
+        'configuracion': config,
+      };
+
+      await file.writeAsString(jsonEncode(configData));
+      return file.path;
     } catch (e) {
       throw Exception('Error exportando configuración: $e');
     }
   }
 
-  /// Importa la configuración desde JSON
+  /// Importa la configuración desde JSON (usando el sistema anterior temporalmente)
   static Future<Map<String, dynamic>> importarConfiguracion(String filePath) async {
     try {
-      final exportService = ExportService();
-      return await exportService.importConfiguracionFromJSON(filePath);
+      final file = File(filePath);
+      final content = await file.readAsString();
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      
+      if (data['version'] == null || data['configuracion'] == null) {
+        throw Exception('Formato de archivo inválido');
+      }
+
+      return data['configuracion'] as Map<String, dynamic>;
     } catch (e) {
       throw Exception('Error importando configuración: $e');
     }

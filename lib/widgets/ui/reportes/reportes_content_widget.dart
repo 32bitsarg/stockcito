@@ -221,7 +221,7 @@ class ReportesContentWidget extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '\$${producto.precioVenta.toStringAsFixed(2)}',
+                      '\$${producto.precioVenta.round()}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFF6B7280),
