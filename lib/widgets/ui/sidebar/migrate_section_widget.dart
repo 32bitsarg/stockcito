@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import '../../../services/auth/supabase_auth_service.dart';
-import '../../../services/auth/user_migration_service.dart';
 import '../../../services/system/logging_service.dart';
+import '../../../services/system/service_manager.dart';
 import '../dashboard/modern_card_widget.dart';
 import '../auth/user_conversion_modal.dart';
 
@@ -15,8 +14,7 @@ class MigrateSectionWidget extends StatefulWidget {
 }
 
 class _MigrateSectionWidgetState extends State<MigrateSectionWidget> {
-  final SupabaseAuthService _authService = SupabaseAuthService();
-  final UserMigrationService _migrationService = UserMigrationService();
+  final ServiceManager _serviceManager = ServiceManager();
   
   bool _isCheckingMigration = false;
   bool _canMigrate = false;
@@ -29,7 +27,19 @@ class _MigrateSectionWidgetState extends State<MigrateSectionWidget> {
   }
 
   Future<void> _checkMigrationStatus() async {
-    if (!_authService.isAnonymous) return;
+    final authService = _serviceManager.authService;
+    final migrationService = _serviceManager.userMigrationService;
+    
+    if (authService == null || migrationService == null) {
+      setState(() {
+        _canMigrate = false;
+        _migrationStatus = 'Servicios no inicializados';
+        _isCheckingMigration = false;
+      });
+      return;
+    }
+
+    if (!authService.isAnonymous) return;
 
     setState(() {
       _isCheckingMigration = true;
@@ -38,7 +48,7 @@ class _MigrateSectionWidgetState extends State<MigrateSectionWidget> {
     try {
       LoggingService.info('🔍 Verificando estado de migración...');
       
-      final validation = await _migrationService.validateConversion();
+      final validation = await migrationService.validateConversion();
       
       setState(() {
         _canMigrate = validation.isValid;
@@ -57,8 +67,10 @@ class _MigrateSectionWidgetState extends State<MigrateSectionWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final authService = _serviceManager.authService;
+    
     // Solo mostrar si el usuario es anónimo
-    if (!_authService.isAnonymous) {
+    if (authService == null || !authService.isAnonymous) {
       return const SizedBox.shrink();
     }
 

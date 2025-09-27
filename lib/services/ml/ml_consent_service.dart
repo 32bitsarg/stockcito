@@ -144,7 +144,7 @@ class MLConsentService {
         
         // Entrenar IA con datos actuales
         LoggingService.info('Entrenando IA con datos actuales...');
-        await _mlTrainingService!.trainWithNewData();
+        await _mlTrainingService!.initialize();
       } else {
         LoggingService.info('Usuario revocó consentimiento, solo entrenamiento local');
         // Marcar que los datos ya no se migrarán automáticamente

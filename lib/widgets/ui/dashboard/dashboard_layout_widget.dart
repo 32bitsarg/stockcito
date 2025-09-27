@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../ui/sidebar/modern_sidebar.dart';
-import '../../modern_header.dart';
-import '../utility/connectivity_status_widget.dart';
+import '../../ui/header/modern_header_refactored.dart';
 import 'dashboard_glassmorphism_widget.dart';
 import 'dashboard_content_widget.dart';
 import '../../../services/ui/dashboard/dashboard_state_service.dart';
@@ -91,20 +90,14 @@ class DashboardLayoutWidget extends StatelessWidget {
     print('   - subtitle: ${screenInfo['subtitle']}');
     print('   - context: ${screenInfo['context']}');
     
-    return ModernHeader(
+    return ModernHeaderRefactored(
       title: screenInfo['title']!,
       subtitle: screenInfo['subtitle']!,
-      searchController: stateService.searchController,
+      context: screenInfo['context']!,
       onSearch: (query) {
         stateService.updateSearchQuery(query);
         onSearch?.call(query);
       },
-      showGreeting: stateService.isDashboardSelected,
-      context: screenInfo['context']!,
-      actions: [
-        // Widget de estado de conectividad
-        const ConnectivityStatusWidget(showDetails: false),
-      ],
     );
   }
 }

@@ -9,6 +9,7 @@ import 'real_sales_chart_widget.dart';
 import 'top_products_widget.dart';
 import 'recent_activities_widget.dart';
 import 'assignments_widget.dart';
+import 'ml_recommendations_widget.dart';
 
 /// Widget principal del contenido del dashboard estilo Eduplex
 class ModernDashboardContentWidget extends StatelessWidget {
@@ -87,10 +88,8 @@ class ModernDashboardContentWidget extends StatelessWidget {
                 flex: 1,
                 child: Column(
                   children: [
-                    // Recomendaciones de IA
-                    AssignmentsWidget(
-                      assignments: _getAIRecommendations(),
-                    ),
+                    // Recomendaciones de IA con predicciones reales
+                    MLRecommendationsWidget(),
                   ],
                 ),
               ),
@@ -103,33 +102,5 @@ class ModernDashboardContentWidget extends StatelessWidget {
 
   Widget _buildScreenContent() {
     return navigationService.getScreen(stateService.selectedIndex);
-  }
-
-
-
-  List<Map<String, dynamic>> _getAIRecommendations() {
-    return [
-      {
-        'title': 'Optimizar inventario de Pijamas',
-        'dateTime': 'Recomendación de IA',
-        'status': 'Nueva',
-        'icon': FontAwesomeIcons.lightbulb,
-        'iconColor': const Color(0xFFF59E0B),
-      },
-      {
-        'title': 'Aumentar precio de Camisetas',
-        'dateTime': 'Análisis de mercado',
-        'status': 'Importante',
-        'icon': FontAwesomeIcons.chartLine,
-        'iconColor': const Color(0xFF10B981),
-      },
-      {
-        'title': 'Promocionar productos de invierno',
-        'dateTime': 'Temporada actual',
-        'status': 'Urgente',
-        'icon': FontAwesomeIcons.snowflake,
-        'iconColor': const Color(0xFF3B82F6),
-      },
-    ];
   }
 }

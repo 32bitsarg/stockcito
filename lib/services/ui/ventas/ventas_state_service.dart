@@ -13,6 +13,10 @@ class VentasStateService extends ChangeNotifier {
   String _filtroMetodoPago = 'Todos';
   bool _cargando = false;
   String? _error;
+  
+  // Estado para selección específica
+  String? _selectedSaleId;
+  bool _isSelectingSale = false;
 
   // Listas para filtros
   final List<String> _estados = ['Todas', 'Pendiente', 'Completada', 'Cancelada'];
@@ -28,6 +32,10 @@ class VentasStateService extends ChangeNotifier {
   String? get error => _error;
   List<String> get estados => _estados;
   List<String> get metodosPago => _metodosPago;
+  
+  // Getters para selección específica
+  String? get selectedSaleId => _selectedSaleId;
+  bool get isSelectingSale => _isSelectingSale;
 
   /// Actualizar ventas
   void updateVentas(List<dynamic> ventas) {
@@ -114,6 +122,85 @@ class VentasStateService extends ChangeNotifier {
     _filtroMetodoPago = 'Todos';
     LoggingService.info('🔄 Filtros de ventas reseteados');
     notifyListeners();
+  }
+
+  // ==================== MÉTODOS DE SELECCIÓN ESPECÍFICA ====================
+
+  /// Seleccionar una venta específica por ID
+  Future<bool> selectSaleById(String saleId) async {
+    try {
+      LoggingService.info('🎯 Seleccionando venta por ID: $saleId');
+      
+      _isSelectingSale = true;
+      notifyListeners();
+
+      // Buscar la venta en la lista actual
+      final venta = _ventas.firstWhere(
+        (v) => v.id.toString() == saleId,
+        orElse: () => null,
+      );
+
+      if (venta != null) {
+        _selectedSaleId = saleId;
+        LoggingService.info('✅ Venta encontrada y seleccionada: ${venta.cliente} - \$${venta.total}');
+        
+        // Limpiar filtros para mostrar la venta
+        resetFilters();
+        
+        // Aplicar filtros específicos de la venta si es necesario
+        if (venta.estado != null && venta.estado.isNotEmpty) {
+          updateFiltroEstado(venta.estado);
+        }
+        
+        if (venta.cliente != null && venta.cliente.isNotEmpty) {
+          updateFiltroCliente(venta.cliente);
+        }
+        
+        _isSelectingSale = false;
+        notifyListeners();
+        return true;
+      } else {
+        LoggingService.warning('⚠️ Venta no encontrada con ID: $saleId');
+        _isSelectingSale = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      LoggingService.error('❌ Error seleccionando venta: $e');
+      _isSelectingSale = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Limpiar selección específica
+  void clearSaleSelection() {
+    if (_selectedSaleId != null || _isSelectingSale) {
+      _selectedSaleId = null;
+      _isSelectingSale = false;
+      LoggingService.info('🔄 Selección de venta limpiada');
+      notifyListeners();
+    }
+  }
+
+  /// Verificar si una venta está seleccionada
+  bool isSaleSelected(String saleId) {
+    return _selectedSaleId == saleId;
+  }
+
+  /// Obtener la venta seleccionada
+  dynamic getSelectedSale() {
+    if (_selectedSaleId == null) return null;
+    
+    try {
+      return _ventas.firstWhere(
+        (v) => v.id.toString() == _selectedSaleId,
+        orElse: () => null,
+      );
+    } catch (e) {
+      LoggingService.error('❌ Error obteniendo venta seleccionada: $e');
+      return null;
+    }
   }
 
   @override

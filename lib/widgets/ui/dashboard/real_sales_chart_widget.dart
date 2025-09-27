@@ -105,7 +105,7 @@ class RealSalesChartWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          '\$${total.toStringAsFixed(0)}',
+                          '\$${total.round()}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: Colors.white,
@@ -153,7 +153,7 @@ class RealSalesChartWidget extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                'Total: \$${ventasPorDia.isEmpty ? '0' : ventasPorDia.map((v) => (v['total'] as double?) ?? 0.0).reduce((a, b) => a + b).toStringAsFixed(0)}',
+                'Total: \$${ventasPorDia.isEmpty ? '0' : ventasPorDia.map((v) => (v['total'] as double?) ?? 0.0).reduce((a, b) => a + b).round()}',
                 style: const TextStyle(
                   fontSize: 12,
                   color: Color(0xFF00FF88),

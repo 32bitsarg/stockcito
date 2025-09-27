@@ -1,6 +1,5 @@
 import '../../system/logging_service.dart';
 import '../../ai/ai_insights_service.dart';
-import '../../ml/advanced_ml_service.dart';
 import '../../ml/ml_persistence_service.dart';
 import '../../system/data_migration_service.dart';
 import '../../datos/dashboard_service.dart';
@@ -13,7 +12,6 @@ class DashboardLogicService {
 
   // Servicios
   final AIInsightsService _aiInsightsService = AIInsightsService();
-  final AdvancedMLService _advancedMLService = AdvancedMLService();
   final MLPersistenceService _mlPersistenceService = MLPersistenceService();
   final DataMigrationService _dataMigrationService = DataMigrationService();
   final DashboardService _dashboardService = DashboardService();
@@ -63,7 +61,7 @@ class DashboardLogicService {
         await _dataMigrationService.migrateExistingData();
         
         // Recargar datos de entrenamiento después de la migración
-        await _advancedMLService.loadTrainingData();
+        LoggingService.info('📊 Datos migrados, listos para análisis ML');
         
         LoggingService.info('✅ Migración de datos completada');
       } else {

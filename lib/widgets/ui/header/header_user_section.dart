@@ -20,58 +20,46 @@ class HeaderUserSection extends StatelessWidget {
   }
 
   Widget _buildUserInfo(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Texto "Logout"
-        Text(
-          'Logout',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-        ),
-
-        const SizedBox(width: 8),
-
-        // Botón de logout
-        _buildLogoutButton(context),
-      ],
-    );
+    return _buildLogoutTextButton(context);
   }
 
 
-  Widget _buildLogoutButton(BuildContext context) {
-    return Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: AppTheme.errorColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.errorColor.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _showLogoutDialog(context),
-          borderRadius: BorderRadius.circular(20),
-          child: Center(
-            child: Icon(
-              Icons.logout,
-              color: AppTheme.errorColor,
-              size: 16,
+  Widget _buildLogoutTextButton(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _showLogoutDialog(context),
+        borderRadius: BorderRadius.circular(8),
+        hoverColor: AppTheme.errorColor.withOpacity(0.05),
+        splashColor: AppTheme.errorColor.withOpacity(0.1),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Padding más compacto
+          decoration: BoxDecoration(
+            color: AppTheme.errorColor.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(6), // Border radius más pequeño
+            border: Border.all(
+              color: AppTheme.errorColor.withOpacity(0.2),
+              width: 1,
             ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.logout,
+                color: AppTheme.errorColor,
+                size: 12, // Icono más pequeño
+              ),
+              const SizedBox(width: 4), // Espaciado más pequeño
+              Text(
+                'Cerrar Sesión',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.errorColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11, // Texto más pequeño
+                ),
+              ),
+            ],
           ),
         ),
       ),

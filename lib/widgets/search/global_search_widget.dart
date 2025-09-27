@@ -270,12 +270,14 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
               ),
             ],
           ),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _focusNode,
-            onChanged: _performSearch,
-            onSubmitted: _performSearch,
-            decoration: InputDecoration(
+          child: SizedBox(
+            height: 40,
+            child: TextField(
+              controller: _searchController,
+              focusNode: _focusNode,
+              onChanged: _performSearch,
+              onSubmitted: _performSearch,
+              decoration: InputDecoration(
               hintText: widget.hintText ?? 'Buscar productos, ventas, clientes...',
               hintStyle: TextStyle(
                 color: AppTheme.textSecondary.withOpacity(0.7),
@@ -319,6 +321,7 @@ class _GlobalSearchWidgetState extends State<GlobalSearchWidget> {
               ),
             ),
           ),
+        ),
     );
   }
 

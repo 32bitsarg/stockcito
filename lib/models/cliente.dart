@@ -43,7 +43,7 @@ class Cliente {
       email: map['email'],
       direccion: map['direccion'],
       fechaRegistro: DateTime.parse(map['fecha_registro']),
-      notas: map['notas'],
+      notas: map['notas'] ?? '',
       totalCompras: map['total_compras'] ?? 0,
       totalGastado: map['total_gastado'] ?? 0.0,
     );

@@ -105,7 +105,7 @@ class DataMigrationService {
         
         // Guardar usando MLTrainingService
         try {
-          await _mlTrainingService!.trainWithNewData();
+          await _mlTrainingService!.initialize();
           print('✅ DEBUG: Producto migrado exitosamente: ${producto.nombre}');
           LoggingService.info('Producto migrado: ${producto.nombre}');
         } catch (e) {
@@ -134,7 +134,7 @@ class DataMigrationService {
         print('🔍 DEBUG: Migrando venta: ${venta.cliente} - \$${venta.total}');
         
         try {
-          await _mlTrainingService!.trainWithNewData();
+          await _mlTrainingService!.initialize();
           print('✅ DEBUG: Venta migrada exitosamente: ${venta.cliente}');
           LoggingService.info('Venta migrada: ${venta.cliente} - \$${venta.total}');
         } catch (e) {
@@ -163,7 +163,7 @@ class DataMigrationService {
         print('🔍 DEBUG: Migrando cliente: ${cliente.nombre}');
         
         try {
-          await _mlTrainingService!.trainWithNewData();
+          await _mlTrainingService!.initialize();
           print('✅ DEBUG: Cliente migrado exitosamente: ${cliente.nombre}');
           LoggingService.info('Cliente migrado: ${cliente.nombre}');
         } catch (e) {

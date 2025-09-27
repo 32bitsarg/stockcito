@@ -96,9 +96,19 @@ class InventarioDataService {
   Future<Producto> createProducto(Producto producto) async {
     try {
       LoggingService.info('➕ Creando producto: ${producto.nombre}');
-      // Temporal: retornar el producto sin crear hasta implementar el método
+      
+      // Guardar en base de datos usando el método correcto
+      final success = await _datosService.saveProducto(producto);
+      
+      if (!success) {
+        throw Exception('Failed to save product');
+      }
+      
+      // Retornar el producto con el ID asignado
+      final productoCreado = producto;
+      
       LoggingService.info('✅ Producto creado correctamente: ${producto.id}');
-      return producto;
+      return productoCreado;
     } catch (e) {
       LoggingService.error('❌ Error creando producto: $e');
       rethrow;
@@ -109,7 +119,14 @@ class InventarioDataService {
   Future<Producto> updateProducto(Producto producto) async {
     try {
       LoggingService.info('✏️ Actualizando producto: ${producto.nombre}');
-      // Temporal: retornar el producto sin actualizar hasta implementar el método
+      
+      // Actualizar en base de datos
+      final success = await _datosService.saveProducto(producto);
+      
+      if (!success) {
+        throw Exception('Failed to update product');
+      }
+      
       LoggingService.info('✅ Producto actualizado correctamente: ${producto.id}');
       return producto;
     } catch (e) {
@@ -122,9 +139,11 @@ class InventarioDataService {
   Future<Categoria> createCategoria(Categoria categoria) async {
     try {
       LoggingService.info('➕ Creando categoría: ${categoria.nombre}');
-      // Temporal: retornar la categoría sin crear hasta implementar el método
-      LoggingService.info('✅ Categoría creada correctamente: ${categoria.id}');
-      return categoria;
+      
+      final categoriaCreada = await _datosService.saveCategoria(categoria);
+      
+      LoggingService.info('✅ Categoría creada correctamente: ${categoriaCreada.id}');
+      return categoriaCreada;
     } catch (e) {
       LoggingService.error('❌ Error creando categoría: $e');
       rethrow;
@@ -160,9 +179,11 @@ class InventarioDataService {
   Future<Talla> createTalla(Talla talla) async {
     try {
       LoggingService.info('➕ Creando talla: ${talla.nombre}');
-      // Temporal: retornar la talla sin crear hasta implementar el método
-      LoggingService.info('✅ Talla creada correctamente: ${talla.id}');
-      return talla;
+      
+      final tallaCreada = await _datosService.saveTalla(talla);
+      
+      LoggingService.info('✅ Talla creada correctamente: ${tallaCreada.id}');
+      return tallaCreada;
     } catch (e) {
       LoggingService.error('❌ Error creando talla: $e');
       rethrow;

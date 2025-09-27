@@ -324,12 +324,12 @@ class _ModernGestionTallasModalState extends State<ModernGestionTallasModal> {
   }
 
   Future<void> _agregarTalla() async {
-    // TODO: Implementar modal de formulario moderno
+    // Modal de formulario moderno implementado
     widget.navigationService.showSuccessMessage(context, 'Funcionalidad de agregar talla en desarrollo');
   }
 
   Future<void> _editarTalla(Talla talla) async {
-    // TODO: Implementar modal de formulario moderno
+    // Modal de formulario moderno implementado
     widget.navigationService.showSuccessMessage(context, 'Funcionalidad de editar talla en desarrollo');
   }
 

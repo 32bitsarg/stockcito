@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../services/ui/clientes/clientes_state_service.dart';
 import '../../../services/ui/clientes/clientes_logic_service.dart';
 import '../../../services/ui/clientes/clientes_navigation_service.dart';
+import '../../../services/ui/clientes/clientes_data_service.dart';
 import '../../../models/cliente.dart';
+import '../modals/client_form_modal.dart';
 import '../../../screens/clientes_screen/widgets/clientes_busqueda.dart';
 import '../../../screens/clientes_screen/widgets/clientes_lista.dart';
 import '../../../screens/clientes_screen/functions/clientes_functions.dart';
@@ -92,19 +94,6 @@ class ClientesContentWidget extends StatelessWidget {
                     color: Color(0xFF2D2D2D),
                   ),
                 ),
-                if (onNuevoCliente != null)
-                  ElevatedButton.icon(
-                    onPressed: onNuevoCliente,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Nuevo Cliente'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00FF88),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -133,7 +122,7 @@ class ClientesContentWidget extends StatelessWidget {
           else
             ClientesLista(
               clientes: stateService.getClientesFiltrados().cast<Cliente>(),
-              onEditarCliente: (cliente) => _editarCliente(context, cliente, logicService, navigationService),
+              onEditarCliente: (cliente) => _showClientModal(context, cliente),
               onEliminarCliente: (cliente) => _eliminarCliente(context, cliente, logicService, navigationService),
             ),
         ],
@@ -141,61 +130,67 @@ class ClientesContentWidget extends StatelessWidget {
     );
   }
 
-  void _editarCliente(
-    BuildContext context,
-    Cliente cliente,
-    ClientesLogicService logicService,
-    ClientesNavigationService navigationService,
-  ) {
-    navigationService.showFormularioCliente(
-      context,
-      cliente: cliente,
-      onGuardar: ({
-        required bool isEditing,
-        Cliente? cliente,
-        required String nombre,
-        required String telefono,
-        required String email,
-        required String direccion,
-        required String notas,
-      }) async {
-        // Validar formulario
-        final errores = logicService.validateFormulario(
-          nombre: nombre,
-          telefono: telefono,
-          email: email,
-          direccion: direccion,
-          notas: notas,
-        );
-        
-        if (errores.values.any((error) => error != null)) {
-          // Hay errores de validación, no hacer nada
-          return;
-        }
-        
-        // Actualizar cliente
-        final exitoso = await logicService.actualizarCliente(
-          cliente: cliente!,
-          nombre: nombre,
-          telefono: telefono,
-          email: email,
-          direccion: direccion,
-          notas: notas,
-        );
-        
-        if (exitoso) {
-          navigationService.closeModal(context);
-          navigationService.showSuccessMessage(
-            context,
-            ClientesFunctions.getActualizacionSuccessText(),
-          );
-        } else {
-          navigationService.showErrorMessage(
-            context,
-            ClientesFunctions.getGuardadoErrorText('Error desconocido'),
-          );
-        }
-      },
+  /// Mostrar modal de edición de cliente
+  void _showClientModal(BuildContext context, Cliente? cliente) {
+    showDialog(
+      context: context,
+      builder: (context) => ClientFormModal(
+        client: cliente,
+        onClientCreated: (nuevoCliente) async {
+          try {
+            final logicService = Provider.of<ClientesLogicService>(context, listen: false);
+            final dataService = Provider.of<ClientesDataService>(context, listen: false);
+            
+            await dataService.saveCliente(nuevoCliente);
+            await logicService.loadClientes();
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cliente creado exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al crear cliente: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+        onClientUpdated: (clienteActualizado) async {
+          try {
+            final logicService = Provider.of<ClientesLogicService>(context, listen: false);
+            final dataService = Provider.of<ClientesDataService>(context, listen: false);
+            
+            await dataService.saveCliente(clienteActualizado);
+            await logicService.loadClientes();
+            
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cliente actualizado exitosamente'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al actualizar cliente: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 
@@ -224,4 +219,5 @@ class ClientesContentWidget extends StatelessWidget {
     }
   }
 }
+
 

@@ -22,10 +22,16 @@ class AdvancedAIAnalysisService {
         ventasPorDia[i] = ventas.where((v) => v.fecha.weekday == i).toList();
       }
       
-      // Análisis por horas del día (simulado)
+      // Análisis por horas del día usando timestamps reales
       final Map<int, int> ventasPorHora = {};
       for (int i = 0; i < 24; i++) {
-        ventasPorHora[i] = Random().nextInt(10); // Simulado por ahora
+        ventasPorHora[i] = 0; // Inicializar en 0
+      }
+      
+      // Analizar timestamps reales de ventas
+      for (final venta in ventas) {
+        final hora = venta.fecha.hour;
+        ventasPorHora[hora] = (ventasPorHora[hora] ?? 0) + 1;
       }
       
       // Calcular tendencias

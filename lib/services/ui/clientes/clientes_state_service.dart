@@ -10,12 +10,20 @@ class ClientesStateService extends ChangeNotifier {
   bool _isLoading = true;
   String _filtroBusqueda = '';
   String? _error;
+  
+  // Estado para selección específica
+  String? _selectedClientId;
+  bool _isSelectingClient = false;
 
   // Getters
   List<dynamic> get clientes => _clientes;
   bool get isLoading => _isLoading;
   String get filtroBusqueda => _filtroBusqueda;
   String? get error => _error;
+  
+  // Getters para selección específica
+  String? get selectedClientId => _selectedClientId;
+  bool get isSelectingClient => _isSelectingClient;
 
   /// Actualizar clientes
   void updateClientes(List<dynamic> clientes) {
@@ -94,10 +102,86 @@ class ClientesStateService extends ChangeNotifier {
     };
   }
 
+  // ==================== MÉTODOS DE SELECCIÓN ESPECÍFICA ====================
+
+  /// Seleccionar un cliente específico por ID
+  Future<bool> selectClientById(String clientId) async {
+    try {
+      LoggingService.info('🎯 Seleccionando cliente por ID: $clientId');
+      
+      _isSelectingClient = true;
+      notifyListeners();
+
+      // Buscar el cliente en la lista actual
+      final cliente = _clientes.firstWhere(
+        (c) => c.id.toString() == clientId,
+        orElse: () => null,
+      );
+
+      if (cliente != null) {
+        _selectedClientId = clientId;
+        LoggingService.info('✅ Cliente encontrado y seleccionado: ${cliente.nombre}');
+        
+        // Limpiar filtros para mostrar el cliente
+        clearFiltroBusqueda();
+        
+        // Aplicar filtro de búsqueda específico del cliente si es necesario
+        if (cliente.nombre != null && cliente.nombre.isNotEmpty) {
+          updateFiltroBusqueda(cliente.nombre);
+        }
+        
+        _isSelectingClient = false;
+        notifyListeners();
+        return true;
+      } else {
+        LoggingService.warning('⚠️ Cliente no encontrado con ID: $clientId');
+        _isSelectingClient = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      LoggingService.error('❌ Error seleccionando cliente: $e');
+      _isSelectingClient = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Limpiar selección específica
+  void clearClientSelection() {
+    if (_selectedClientId != null || _isSelectingClient) {
+      _selectedClientId = null;
+      _isSelectingClient = false;
+      LoggingService.info('🔄 Selección de cliente limpiada');
+      notifyListeners();
+    }
+  }
+
+  /// Verificar si un cliente está seleccionado
+  bool isClientSelected(String clientId) {
+    return _selectedClientId == clientId;
+  }
+
+  /// Obtener el cliente seleccionado
+  dynamic getSelectedClient() {
+    if (_selectedClientId == null) return null;
+    
+    try {
+      return _clientes.firstWhere(
+        (c) => c.id.toString() == _selectedClientId,
+        orElse: () => null,
+      );
+    } catch (e) {
+      LoggingService.error('❌ Error obteniendo cliente seleccionado: $e');
+      return null;
+    }
+  }
+
   @override
   void dispose() {
     LoggingService.info('🛑 ClientesStateService disposed');
     super.dispose();
   }
 }
+
 

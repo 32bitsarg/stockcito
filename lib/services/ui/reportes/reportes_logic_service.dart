@@ -1,6 +1,8 @@
 import '../../../models/producto.dart';
 import '../../../services/datos/datos.dart';
 import '../../../services/system/logging_service.dart';
+import '../../../services/export/export_service.dart';
+import '../../../services/export/export_models.dart';
 import 'reportes_state_service.dart';
 import '../../../screens/reportes_screen/functions/reportes_functions.dart';
 
@@ -108,14 +110,72 @@ class ReportesLogicService {
     }
   }
 
-  /// Exportar reporte
+  /// Exportar reporte usando el nuevo sistema de exportación
   Future<bool> exportarReporte(String formato) async {
     try {
       LoggingService.info('📄 Exportando reporte en formato: $formato');
       
-      // Temporal: simular exportación exitosa hasta implementar el método
-      LoggingService.info('✅ Reporte exportado correctamente');
-      return true;
+      final productos = getProductosFiltrados();
+      final metricas = _stateService.metricasCompletas ?? {};
+      
+      // Preparar datos para exportación
+      final insightsData = {
+        'salesTrend': {
+          'growthPercentage': metricas['ventas']?['ultimos_30_dias'] ?? 0,
+          'trend': 'Estable',
+          'bestDay': 'Lunes',
+        },
+        'popularProducts': {
+          'topProduct': productos.isNotEmpty ? productos.first.nombre : 'N/A',
+          'salesCount': productos.length,
+          'category': productos.isNotEmpty ? productos.first.categoria : 'N/A',
+        },
+        'stockRecommendations': productos.where((p) => p.stock <= 5).map((p) => {
+          'productName': p.nombre,
+          'action': 'Reabastecer',
+          'details': 'Stock bajo: ${p.stock} unidades',
+          'urgency': p.stock <= 0 ? 'Alta' : 'Media',
+        }).toList(),
+      };
+      
+      final exportService = ExportService();
+      final fileName = 'reporte_inventario_${DateTime.now().millisecondsSinceEpoch}';
+      
+      ExportResult result;
+      if (formato.toLowerCase() == 'pdf') {
+        result = await exportService.exportInsightsToPDF(
+          insightsData: insightsData,
+          fileName: fileName,
+          options: ExportOptions(
+            includeCharts: true,
+            includeRecommendations: true,
+            includeMetadata: true,
+            customTitle: 'Reporte de Inventario - Stockcito',
+          ),
+        );
+      } else if (formato.toLowerCase() == 'excel') {
+        result = await exportService.exportInsightsToExcel(
+          insightsData: insightsData,
+          fileName: fileName,
+          options: ExportOptions(
+            includeCharts: true,
+            includeRecommendations: true,
+            includeMetadata: true,
+            customTitle: 'Reporte de Inventario - Stockcito',
+          ),
+        );
+      } else {
+        throw Exception('Formato no soportado: $formato');
+      }
+      
+      if (result.success) {
+        LoggingService.info('✅ Reporte $formato exportado correctamente: ${result.filePath}');
+        return true;
+      } else {
+        LoggingService.error('❌ Error en exportación: ${result.errorMessage}');
+        _stateService.updateError('Error exportando reporte: ${result.errorMessage}');
+        return false;
+      }
     } catch (e) {
       LoggingService.error('❌ Error exportando reporte: $e');
       _stateService.updateError('Error exportando reporte: $e');

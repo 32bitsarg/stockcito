@@ -8,7 +8,7 @@ class ConfiguracionStateService extends ChangeNotifier {
   // Estado de la configuración
   double _margenDefecto = 50.0;
   double _iva = 21.0;
-  String _moneda = 'USD';
+  String _moneda = 'ARS';
   bool _notificacionesStock = true;
   bool _notificacionesVentas = false;
   bool _exportarAutomatico = false;
@@ -155,7 +155,7 @@ class ConfiguracionStateService extends ChangeNotifier {
   void loadFromMap(Map<String, dynamic> config) {
     _margenDefecto = config['margenDefecto'] ?? 50.0;
     _iva = config['iva'] ?? 21.0;
-    _moneda = config['moneda'] ?? 'USD';
+    _moneda = config['moneda'] ?? 'ARS';
     _notificacionesStock = config['notificacionesStock'] ?? true;
     _notificacionesVentas = config['notificacionesVentas'] ?? false;
     _exportarAutomatico = config['exportarAutomatico'] ?? false;
@@ -171,7 +171,7 @@ class ConfiguracionStateService extends ChangeNotifier {
   void resetToDefaults() {
     _margenDefecto = 50.0;
     _iva = 21.0;
-    _moneda = 'USD';
+    _moneda = 'ARS';
     _notificacionesStock = true;
     _notificacionesVentas = false;
     _exportarAutomatico = false;

@@ -31,10 +31,6 @@ class ConfiguracionContentWidget extends StatelessWidget {
               
               const SizedBox(height: 24),
               
-              _buildTemaSection(context, stateService),
-              
-              const SizedBox(height: 24),
-              
               _buildNotificacionesSection(context, stateService),
               
               const SizedBox(height: 24),
@@ -196,42 +192,40 @@ class ConfiguracionContentWidget extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          // Información de moneda fija
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2196F3).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF2196F3).withOpacity(0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.info_outline,
+                  color: Color(0xFF2196F3),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Moneda: Peso Argentino (ARS)',
+                    style: const TextStyle(
+                      color: Color(0xFF2196F3),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTemaSection(BuildContext context, ConfiguracionStateService stateService) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Configuración de Tema',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2D2D2D),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Tema actual: Claro'),
-        ],
-      ),
-    );
-  }
 
   Widget _buildNotificacionesSection(BuildContext context, ConfiguracionStateService stateService) {
     return Container(

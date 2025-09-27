@@ -1,10 +1,12 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/producto.dart';
-import '../../../services/system/export_service.dart';
 import '../../../services/datos/datos.dart';
 
 class ReportesFunctions {
@@ -275,13 +277,49 @@ class ReportesFunctions {
     );
   }
 
-  /// Exporta productos a CSV
+  /// Exporta productos a CSV (usando el sistema anterior temporalmente)
   static Future<String> exportarProductosCSV(List<Producto> productos) async {
-    final exportService = ExportService();
-    return await exportService.exportProductosToCSV(productos);
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'productos_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final file = File('${directory.path}/$fileName');
+
+      final csvContent = StringBuffer();
+      
+      // Encabezados
+      csvContent.writeln('ID,Nombre,Categoria,Talla,Stock,Precio Venta,Costo Total,Margen,Fecha Creacion');
+      
+      // Datos
+      for (final producto in productos) {
+        csvContent.writeln([
+          producto.id,
+          _escapeCsvField(producto.nombre),
+          _escapeCsvField(producto.categoria),
+          _escapeCsvField(producto.talla),
+          producto.stock,
+          producto.precioVenta.toStringAsFixed(2),
+          producto.costoTotal.toStringAsFixed(2),
+          producto.margenGanancia.toStringAsFixed(2),
+          producto.fechaCreacion.toIso8601String(),
+        ].join(','));
+      }
+
+      await file.writeAsString(csvContent.toString());
+      return file.path;
+    } catch (e) {
+      throw Exception('Error exportando productos a CSV: $e');
+    }
   }
 
-  /// Exporta reporte completo a JSON
+  /// Escapa campos CSV
+  static String _escapeCsvField(String field) {
+    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
+      return '"${field.replaceAll('"', '""')}"';
+    }
+    return field;
+  }
+
+  /// Exporta reporte completo a JSON (usando el sistema anterior temporalmente)
   static Future<String> exportarReporteCompletoJSON({
     required List<Producto> productos,
     required Map<String, dynamic> metricas,
@@ -293,22 +331,39 @@ class ReportesFunctions {
       final ventas = await datosService.getVentas();
       final clientes = await datosService.getClientes();
       
-      final exportService = ExportService();
-      return await exportService.exportReporteCompletoToJSON(
-        productos: productos,
-        ventas: ventas,
-        clientes: clientes,
-        metricas: metricas,
-      );
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'reporte_completo_${DateTime.now().millisecondsSinceEpoch}.json';
+      final file = File('${directory.path}/$fileName');
+
+      final reporteData = {
+        'version': '1.1.0-alpha.1',
+        'fecha_exportacion': DateTime.now().toIso8601String(),
+        'metricas': metricas,
+        'productos': productos.map((p) => p.toMap()).toList(),
+        'ventas': ventas.map((v) => v.toMap()).toList(),
+        'clientes': clientes.map((c) => c.toMap()).toList(),
+      };
+
+      await file.writeAsString(jsonEncode(reporteData));
+      return file.path;
     } catch (e) {
       // Si hay error cargando ventas/clientes, exportar solo productos
-      final exportService = ExportService();
-      return await exportService.exportReporteCompletoToJSON(
-        productos: productos,
-        ventas: [],
-        clientes: [],
-        metricas: metricas,
-      );
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'reporte_productos_${DateTime.now().millisecondsSinceEpoch}.json';
+      final file = File('${directory.path}/$fileName');
+
+      final reporteData = {
+        'version': '1.1.0-alpha.1',
+        'fecha_exportacion': DateTime.now().toIso8601String(),
+        'metricas': metricas,
+        'productos': productos.map((p) => p.toMap()).toList(),
+        'ventas': [],
+        'clientes': [],
+        'error': 'No se pudieron cargar ventas y clientes',
+      };
+
+      await file.writeAsString(jsonEncode(reporteData));
+      return file.path;
     }
   }
 
