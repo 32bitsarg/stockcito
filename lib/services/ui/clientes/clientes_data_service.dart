@@ -1,6 +1,7 @@
 import '../../../models/cliente.dart';
 import '../../../services/datos/datos.dart';
 import '../../../services/system/logging_service.dart';
+import '../../../services/system/connectivity_service.dart';
 
 /// Servicio que maneja la carga y gestión de datos de los clientes
 class ClientesDataService {
@@ -132,7 +133,7 @@ class ClientesDataService {
   Future<void> syncData() async {
     try {
       LoggingService.info('🔄 Sincronizando datos de clientes...');
-      // await _datosService.syncAllData(); // Comentado hasta que se implemente
+      await _datosService.forceSync(); // Usar método existente de DatosService
       LoggingService.info('✅ Datos de clientes sincronizados correctamente');
     } catch (e) {
       LoggingService.error('❌ Error sincronizando datos: $e');
@@ -143,8 +144,9 @@ class ClientesDataService {
   /// Verificar conectividad
   Future<bool> checkConnectivity() async {
     try {
-      // return await _datosService.checkConnectivity(); // Comentado hasta que se implemente
-      return true; // Temporal
+      final connectivityService = ConnectivityService();
+      final connectivityInfo = await connectivityService.checkConnectivity();
+      return connectivityInfo.hasInternet; // Usar servicio de conectividad existente
     } catch (e) {
       LoggingService.error('❌ Error verificando conectividad: $e');
       return false;
